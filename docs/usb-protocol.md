@@ -1,17 +1,25 @@
-# Third Eye USB 연결 설계 (후속 단계, 아직 구현되지 않음)
+# Third Eye USB 통신 설계
 
 ## 확정된 구성
 
 Galaxy A34(Android 16)가 USB Host, XIAO ESP32-S3 Sense가 USB Device이다.
 ESP32-S3가 카메라 영상과 I²C 연결된 VL53L8CX 두 개의 측정값을 수집하고,
 스마트폰이 YOLO 추론, 위험도 분석 및 한국어 TTS를 처리한다. Wi-Fi/Bluetooth는 사용하지 않는다.
-현재 앱은 Mock만 사용하며 USB 권한 요청이나 실제 수신 기능을 제공하지 않는다.
+현재 앱은 Mock과 USB Serial JSON 거리 수신을 제공한다. Android USB Host API로
+Espressif VID 0x303A의 단일 CDC ACM 장치에서 115200/8N1, DTR·RTS 활성화를 요청한다.
+연결 버튼, 권한 거절, 분리, 통신 오류, 4초 유효 데이터 timeout을 처리한다.
+백그라운드에서는 연결을 닫고 복귀 후 사용자가 다시 연결한다.
+실제 Galaxy/XIAO에서 이번 앱 수신 구현은 아직 검증하지 않았다.
+
+현재 wire format은 LF/CRLF 종료 JSON `{"left_mm":500,"right_mm":1200}`이다.
+512바이트 줄 제한, 양쪽 정수 1~100000mm 검증, 분할·병합 수신을 지원한다.
+아래 바이너리 프레임 규격은 **추후 JPEG 혼합 전송을 위한 제안**이며 현재 파서가 지원하지 않는다.
 
 ## 단계별 구현
 
 1. 펌웨어의 USB VID/PID, interface/endpoint descriptor와 CDC ACM 지원 여부를 실제 장치에서 확인한다.
    USB Serial/JTAG 디버깅 포트와 TinyUSB CDC 데이터 포트는 같다고 가정하지 않는다.
-   Android `UsbManager`, `UsbDeviceConnection`을 통해 열거·권한 요청·interface claim·endpoint I/O를 구현한다.
+   Android `UsbManager`, `UsbDeviceConnection`을 통한 열거·권한 요청·interface claim·endpoint I/O는 구현했고 실기기 검증이 필요하다.
    CDC ACM으로 확인되면 검증된 USB serial 드라이버 사용을 검토한다. 라이브러리 채택 시 이유와 버전을 기록한다.
 2. 연결 이벤트는 foreground에서 다시 열거하고 권한을 확인한다. `requestPermission` 응답의 장치와 허용 결과를
    확인한다. Android 16 대상 PendingIntent/receiver 정책을 준수하고, 앱 범위 permission action을 사용한다.

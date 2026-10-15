@@ -9,8 +9,8 @@ android {
         applicationId = "com.guideeye.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -18,4 +18,10 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 }
-dependencies { testImplementation("junit:junit:4.13.2") }
+dependencies {
+    // Safe receiver registration across supported Android versions.
+    implementation("androidx.core:core:1.17.0")
+    testImplementation("junit:junit:4.13.2")
+    // Android supplies org.json at runtime; use its JVM implementation only for decoder tests.
+    testImplementation("org.json:json:20260814")
+}

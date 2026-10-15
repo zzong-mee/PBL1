@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Third Eye</string>
-    <string name="subtitle">AI 보행 보조 · 1단계 개발 화면</string>
+    <string name="subtitle">AI 보행 보조 · USB 거리 수신 테스트</string>
     <string name="mock_notice">가상 데이터 모드입니다. 실제 장애물을 감지하지 않습니다.</string>
     <string name="camera_status">USB 카메라: 미연결</string>
     <string name="sensor_status">USB 실제 좌측·우측 센서: 미연결</string>
@@ -8,9 +8,9 @@
 객체 인식: 아직 구현되지 않음</string>
     <string name="left_distance">가상 좌측 거리: %1$.1f미터</string>
     <string name="right_distance">가상 우측 거리: %1$.1f미터</string>
-    <string name="risk_pending">위험도: 미평가 (1단계)</string>
+    <string name="risk_pending">위험도: 미평가</string>
     <string name="speech_test">한국어 음성 안내 테스트</string>
-    <string name="speech_message">Third Eye 음성 안내 테스트입니다. 현재 가상 데이터 모드입니다.</string>
+    <string name="speech_message">Third Eye 음성 안내 테스트입니다. 음성 출력이 정상적으로 작동합니다.</string>
     <string name="speech_idle">최근 음성 안내: 없음</string>
     <string name="speech_recent">최근 음성 안내: %1$s</string>
     <string name="tts_status">음성 상태: %1$s</string>
@@ -26,4 +26,25 @@
     <string name="resume_mock">가상 거리 갱신 시작</string>
     <string name="left_waiting">가상 좌측 거리: 대기 중</string>
     <string name="right_waiting">가상 우측 거리: 대기 중</string>
+    <string name="usb_notice">USB 거리 수신 모드입니다. 테스트 펌웨어 값과 실제 센서 측정값은 구분해서 확인하세요.</string>
+    <string name="usb_connect">USB 연결 / 다시 연결</string>
+    <string name="usb_mock">Mock 모드로 전환</string>
+    <string name="usb_idle">USB 거리: 연결 버튼을 눌러주세요</string>
+    <string name="usb_missing">USB 거리: 연결된 장치 없음</string>
+    <string name="usb_multiple">USB 거리: 지원 장치가 여러 개입니다. XIAO 하나만 연결하세요.</string>
+    <string name="usb_unsupported">USB 거리: 지원하지 않는 장치 구성 (Espressif 단일 CDC ACM 필요)</string>
+    <string name="usb_permission">USB 거리: 접근 권한 승인 대기 중</string>
+    <string name="usb_denied">USB 거리: 권한 거절됨. 연결 버튼으로 다시 요청하세요.</string>
+    <string name="usb_attached">USB 거리: 장치 연결됨. 연결 버튼을 누르세요.</string>
+    <string name="usb_detached">USB 거리: 장치 분리됨</string>
+    <string name="usb_opening">USB 거리: 통신 설정 중</string>
+    <string name="usb_waiting">USB 거리: 연결됨 · 유효한 JSON 대기 중</string>
+    <string name="usb_receiving">USB 거리: JSON 수신 중 (센서 실측 여부는 펌웨어 확인 필요)</string>
+    <string name="usb_timeout">USB 거리: 4초간 유효한 데이터 없음. 연결을 다시 시도하세요.</string>
+    <string name="usb_error">USB 거리: 통신 오류. 케이블·펌웨어·다른 터미널 앱의 연결 해제를 확인하세요.</string>
+    <string name="usb_left">USB 좌측 거리: %1$.2f미터</string>
+    <string name="usb_right">USB 우측 거리: %1$.2f미터</string>
+    <string name="usb_left_waiting">USB 좌측 거리: 유효한 데이터 없음</string>
+    <string name="usb_right_waiting">USB 우측 거리: 유효한 데이터 없음</string>
+    <string name="usb_sensor_status">센서 실측 여부: 확인되지 않음 (USB 수신 테스트)</string>
 </resources>

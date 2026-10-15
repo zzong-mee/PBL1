@@ -28,6 +28,10 @@
             android:text="@string/tts_initializing" android:textSize="18sp" android:textColor="#172533" android:paddingBottom="16dp" />
         <TextView android:id="@+id/recent_speech" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:text="@string/speech_idle" android:textSize="18sp" android:textColor="#172533" android:paddingBottom="16dp" />
+        <Button android:id="@+id/connect_usb" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="64dp" android:text="@string/usb_connect" android:textSize="20sp" />
+        <Button android:id="@+id/use_mock" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="64dp" android:text="@string/usb_mock" android:textSize="20sp" />
         <Button android:id="@+id/toggle_mock" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:minHeight="64dp" android:text="@string/pause_mock" android:textSize="20sp" />
         <Button android:id="@+id/speech_test" android:layout_width="match_parent" android:layout_height="wrap_content"
