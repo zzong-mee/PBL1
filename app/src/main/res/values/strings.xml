@@ -90,4 +90,8 @@
     <string name="external_detection_info">처리 시간: %1$d밀리초
 탐지: %2$s</string>
     <string name="external_camera_error">카메라 초기화 실패. XIAO 카메라 연결과 펌웨어 설정을 확인하세요.</string>
+    <string name="phone_permission">카메라 권한이 필요합니다. 중앙 물체 버튼으로 다시 시도하거나 휴대폰 설정에서 카메라 권한을 허용하세요.</string>
+    <string name="phone_waiting">휴대폰 후면 카메라 분석 대기. 카메라를 물체 쪽으로 향하고 잠시 후 중앙 물체를 눌러주세요.</string>
+    <string name="phone_ready">휴대폰 후면 카메라 객체 인식 중</string>
+    <string name="phone_error">휴대폰 카메라를 사용할 수 없습니다. 다른 카메라 앱을 닫고 일시정지 후 다시 시작하세요.</string>
 </resources>

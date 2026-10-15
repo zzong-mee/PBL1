@@ -34,7 +34,7 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
         latest?.takeIf { now-it.first in 0..2000 }?.let { DetectionRules.central(it.second) }
     fun hasFreshFrame(now: Long=SystemClock.elapsedRealtime()): Boolean = latest?.let { now-it.first in 0..2000 } == true
 
-    fun acceptJpeg(bytes: ByteArray, received: Long) {
+    fun acceptJpeg(bytes: ByteArray, received: Long, respectExif: Boolean = false) {
         if (closed || !busy.compareAndSet(false,true)) return
         val token=generation
         worker.execute {
@@ -43,8 +43,26 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
                 val bounds=BitmapFactory.Options().apply { inJustDecodeBounds=true }
                 BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds)
                 require(bounds.outWidth in 1..1280 && bounds.outHeight in 1..1280)
-                val bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.size) ?: error("Invalid JPEG")
+                var bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.size) ?: error("Invalid JPEG")
                 decoded=bitmap
+                if (respectExif) {
+                    val orientation = android.media.ExifInterface(java.io.ByteArrayInputStream(bytes))
+                        .getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)
+                    val degrees = when (orientation) {
+                        android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                        else -> 0f
+                    }
+                    if (degrees != 0f) {
+                        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height,
+                            android.graphics.Matrix().apply { postRotate(degrees) }, true)
+                        if (rotated !== bitmap) bitmap.recycle()
+                        bitmap = rotated
+                        decoded = bitmap
+                    }
+                }
+                val frame = bitmap
                 val start=SystemClock.elapsedRealtime()
                 val engine=detector ?: YoloXDetector(app).also { detector=it }
                 val detections=engine.detect(bitmap)
@@ -53,8 +71,8 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
                     if(!closed && token==generation) {
                         latest=received to detections
                         status(R.string.external_vision_ready)
-                        result(bitmap,detections,elapsed)
-                    } else bitmap.recycle()
+                        result(frame,detections,elapsed)
+                    } else frame.recycle()
                 }
             } catch (_: Exception) {
                 decoded?.recycle()
