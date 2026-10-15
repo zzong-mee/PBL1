@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import com.guideeye.app.accessibility.ButtonTouchFeedback
 import com.guideeye.app.data.DistanceSource
 import com.guideeye.app.data.MockDistanceSource
 import com.guideeye.app.speech.KoreanSpeechGuide
@@ -20,6 +21,10 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        listOf(R.id.title, R.id.heading_connection, R.id.heading_distance,
+            R.id.heading_voice, R.id.heading_camera).forEach {
+            androidx.core.view.ViewCompat.setAccessibilityHeading(findViewById(it), true)
+        }
         // Android 16 enforces edge-to-edge: keep controls clear of system bars and cutouts.
         findViewById<View>(R.id.root).setOnApplyWindowInsetsListener { view, insets ->
             if (android.os.Build.VERSION.SDK_INT >= 30) {
@@ -71,6 +76,9 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.toggle_mock).setOnClickListener {
             mockEnabled = !mockEnabled
             updateMock()
+        }
+        listOf(R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.speech_test).forEach {
+            ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
         }
     }
 

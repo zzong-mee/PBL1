@@ -1,40 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:fillViewport="true" android:clipToPadding="false">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="24dp">
-        <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/app_name" android:textSize="32sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/subtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/subtitle" android:textSize="18sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/notice" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/mock_notice" android:textSize="20sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/camera_status" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/camera_status" android:textSize="20sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/sensor_status" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/sensor_status" android:textSize="20sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/video" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/video_placeholder" android:textSize="18sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/mock_status" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/mock_running" android:textSize="18sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/left_distance" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/left_waiting" android:textSize="26sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/right_distance" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/right_waiting" android:textSize="26sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/risk" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/risk_pending" android:textSize="20sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/tts_status" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/tts_initializing" android:textSize="18sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <TextView android:id="@+id/recent_speech" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/speech_idle" android:textSize="18sp" android:textColor="#172533" android:paddingBottom="16dp" />
-        <Button android:id="@+id/connect_usb" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:minHeight="64dp" android:text="@string/usb_connect" android:textSize="20sp" />
-        <Button android:id="@+id/use_mock" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:minHeight="64dp" android:text="@string/usb_mock" android:textSize="20sp" />
-        <Button android:id="@+id/toggle_mock" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:minHeight="64dp" android:text="@string/pause_mock" android:textSize="20sp" />
-        <Button android:id="@+id/speech_test" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:minHeight="64dp" android:text="@string/speech_test" android:textSize="20sp" />
+        android:orientation="vertical" android:padding="20dp">
+        <TextView android:id="@+id/title" style="@style/DashboardHeading"
+            android:text="@string/app_name" android:textSize="36sp" />
+        <TextView android:id="@+id/subtitle" style="@style/DashboardText" android:text="@string/subtitle" />
+
+        <LinearLayout style="@style/DashboardCard">
+            <TextView android:id="@+id/heading_connection" style="@style/DashboardHeading" android:text="@string/section_connection" />
+            <TextView android:id="@+id/notice" style="@style/DashboardText"
+                android:background="@drawable/bg_notice" android:padding="16dp"
+                android:textColor="@color/text_primary" android:text="@string/mock_notice" />
+            <TextView android:id="@+id/mock_status" style="@style/DashboardText" android:text="@string/mock_running" />
+            <TextView android:id="@+id/sensor_status" style="@style/DashboardText" android:text="@string/sensor_status" />
+            <Button android:id="@+id/connect_usb" style="@style/DashboardButton.Primary" android:text="@string/usb_connect" />
+            <Button android:id="@+id/use_mock" style="@style/DashboardButton" android:text="@string/usb_mock" />
+            <Button android:id="@+id/toggle_mock" style="@style/DashboardButton" android:text="@string/pause_mock" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DashboardCard">
+            <TextView android:id="@+id/heading_distance" style="@style/DashboardHeading" android:text="@string/section_distance" />
+            <TextView android:id="@+id/left_distance" style="@style/DashboardDistance" android:text="@string/left_waiting" />
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/surface_border"
+                android:importantForAccessibility="no" />
+            <TextView android:id="@+id/right_distance" style="@style/DashboardDistance" android:text="@string/right_waiting" />
+            <TextView android:id="@+id/risk" style="@style/DashboardText" android:text="@string/risk_pending" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DashboardCard">
+            <TextView android:id="@+id/heading_voice" style="@style/DashboardHeading" android:text="@string/section_voice" />
+            <TextView style="@style/DashboardText" android:text="@string/touch_instructions" />
+            <TextView android:id="@+id/tts_status" style="@style/DashboardText" android:text="@string/tts_initializing" />
+            <Button android:id="@+id/speech_test" style="@style/DashboardButton.Primary" android:text="@string/speech_test" />
+            <TextView style="@style/DashboardText" android:layout_marginTop="16dp" android:text="@string/accessibility_instructions" />
+            <TextView android:id="@+id/recent_speech" style="@style/DashboardText" android:layout_marginTop="16dp"
+                android:text="@string/speech_idle" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DashboardCard">
+            <TextView android:id="@+id/heading_camera" style="@style/DashboardHeading" android:text="@string/section_camera" />
+            <TextView android:id="@+id/camera_status" style="@style/DashboardText" android:text="@string/camera_status" />
+            <TextView android:id="@+id/video" style="@style/DashboardText" android:background="@drawable/bg_notice"
+                android:padding="20dp" android:gravity="center" android:text="@string/video_placeholder" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

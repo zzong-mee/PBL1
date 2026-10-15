@@ -27,8 +27,8 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
             }
         }
         engine?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(id: String?) = report(R.string.tts_speaking)
-            override fun onDone(id: String?) = report(R.string.tts_done)
+            override fun onStart(id: String?) { if (id != "button-label") report(R.string.tts_speaking) }
+            override fun onDone(id: String?) { if (id != "button-label") report(R.string.tts_done) }
             @Deprecated("Required by Android API")
             override fun onError(id: String?) = report(R.string.tts_error)
             override fun onError(id: String?, code: Int) = report(R.string.tts_error)
@@ -41,9 +41,18 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
 
     fun speak(message: String): Boolean {
         if (!ready || closed) return false
-        val accepted = engine?.speak(message, TextToSpeech.QUEUE_FLUSH, null, "guideeye-test") == TextToSpeech.SUCCESS
+        val accepted = engine?.speak(message, TextToSpeech.QUEUE_ADD, null, "guideeye-test") == TextToSpeech.SUCCESS
         if (!accepted) report(R.string.tts_error)
         return accepted
+    }
+
+    /** Each new contact replaces any previous label; it never executes the button action. */
+    fun announceButton(name: String) {
+        if (ready && !closed) {
+            if (engine?.speak(name, TextToSpeech.QUEUE_FLUSH, null, "button-label") != TextToSpeech.SUCCESS) {
+                report(R.string.tts_error)
+            }
+        }
     }
 
     fun stop() { engine?.stop() }

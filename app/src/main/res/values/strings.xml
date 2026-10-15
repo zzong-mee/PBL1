@@ -47,4 +47,10 @@
     <string name="usb_left_waiting">USB 좌측 거리: 유효한 데이터 없음</string>
     <string name="usb_right_waiting">USB 우측 거리: 유효한 데이터 없음</string>
     <string name="usb_sensor_status">센서 실측 여부: 확인되지 않음 (USB 수신 테스트)</string>
+    <string name="section_connection">연결 및 모드</string>
+    <string name="section_distance">좌우 거리</string>
+    <string name="section_voice">음성 안내</string>
+    <string name="section_camera">카메라 및 객체 인식</string>
+    <string name="touch_instructions">버튼을 누르면 이름과 진동을 안내하고, 손을 떼면 실행합니다. 취소하려면 버튼 밖으로 손을 옮긴 뒤 떼세요.</string>
+    <string name="accessibility_instructions">TalkBack 사용 중에는 기본 탐색과 두 번 탭으로 실행합니다. 버튼 이름은 한국어 음성 준비 후 안내되며, 진동은 기기의 터치 진동 설정을 따릅니다.</string>
 </resources>
