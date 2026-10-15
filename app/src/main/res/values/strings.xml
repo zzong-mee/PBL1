@@ -56,7 +56,6 @@
     <string name="button_cancelled">취소했습니다.</string>
     <string name="developer_mode">개발자 모드</string>
     <string name="back_to_user">사용자 화면으로 돌아가기</string>
-    <string name="home_not_available">보행 안내는 아직 사용할 수 없습니다.</string>
     <string name="home_intro">Third Eye입니다. 중앙 물체 인식은 준비 중입니다. 위쪽 큰 버튼은 중앙 물체, 아래쪽 큰 버튼은 %1$s입니다.</string>
     <string name="home_intro_landscape">Third Eye입니다. 중앙 물체 인식은 준비 중입니다. 왼쪽 큰 버튼은 중앙 물체, 오른쪽 큰 버튼은 %1$s입니다.</string>
     <string name="home_voice_ready">음성 안내 사용 가능</string>
@@ -71,4 +70,15 @@
     <string name="central_object_paused">일시정지 상태입니다. 다시 시작 버튼을 눌러 일시정지를 해제해주세요.</string>
     <string name="operation_paused_message">일시정지했습니다.</string>
     <string name="operation_resumed_message">일시정지를 해제했습니다. 카메라와 객체 인식은 아직 준비 중입니다.</string>
+    <string name="central_object_description">중앙 물체. 카메라 화면 중앙의 사물 종류를 듣습니다.</string>
+    <string name="central_object_not_ready_state">객체 인식 준비 중</string>
+    <string name="central_object_paused_state">일시정지 중. 먼저 다시 시작을 누르세요.</string>
+    <string name="voice_preparing_state">한국어 음성 준비 중</string>
+    <string name="voice_unavailable_state">한국어 음성을 사용할 수 없음</string>
+    <string name="pause_description">일시정지. 현재 안내를 멈춥니다.</string>
+    <string name="resume_description">다시 시작. 일시정지를 해제합니다.</string>
+    <string name="pause_state_active">일시정지하지 않은 상태</string>
+    <string name="pause_state_paused">현재 일시정지 상태</string>
+    <string name="developer_mode_description">개발자 모드. 연결과 테스트 기능을 위한 별도 화면을 엽니다.</string>
+    <string name="home_touch_help">버튼을 누른 채로 있으면 실행되지 않습니다. 손을 떼면 실행됩니다. 취소하려면 버튼 밖으로 손을 옮긴 뒤 떼세요. 버튼 밖으로 옮긴 뒤에는 다시 안으로 돌아와도 실행되지 않습니다.</string>
 </resources>

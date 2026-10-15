@@ -1,7 +1,6 @@
 package com.guideeye.app.accessibility
 
 import android.annotation.SuppressLint
-import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityManager
 import android.widget.Button
@@ -27,7 +26,7 @@ object ButtonTouchFeedback {
                 event.getY(index) >= 0 && event.getY(index) < view.height
             fun cancelWithFeedback(newlyCancelled: Boolean = gesture.cancel()) {
                 if (newlyCancelled) {
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    TouchHaptics.cancel(view)
                     announce(view.context.getString(R.string.button_cancelled))
                 }
                 view.isPressed = false
@@ -39,7 +38,7 @@ object ButtonTouchFeedback {
                     // Otherwise ScrollView intercepts MOVE and the user cannot deliberately cancel.
                     view.parent?.requestDisallowInterceptTouchEvent(true)
                     view.isPressed = true
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    TouchHaptics.contact(view)
                     announce(button.text.toString().replace("/", " 또는 "))
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -48,11 +47,16 @@ object ButtonTouchFeedback {
                 }
                 MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP -> cancelWithFeedback()
                 MotionEvent.ACTION_UP -> {
-                    val click = gesture.release(event.getPointerId(event.actionIndex), inside(event.actionIndex))
+                    val releasedInside = inside(event.actionIndex)
+                    if (!releasedInside) cancelWithFeedback()
+                    val click = gesture.release(event.getPointerId(event.actionIndex), releasedInside)
                     view.isPressed = false
                     view.parent?.requestDisallowInterceptTouchEvent(false)
                     // Same click path as TalkBack, keyboard and Switch Access. Execute only once.
-                    if (click && view.isEnabled) view.performClick()
+                    if (click && view.isEnabled) {
+                        TouchHaptics.confirm(view)
+                        view.performClick()
+                    }
                 }
                 MotionEvent.ACTION_CANCEL -> {
                     gesture.cancel()

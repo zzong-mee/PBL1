@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    >
+    android:importantForAccessibility="no">
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
         android:layout_above="@id/open_developer" android:orientation="vertical" android:padding="20dp">
         <TextView android:id="@+id/home_title" style="@style/DashboardHeading"
-            android:text="@string/app_name" android:textSize="36sp" />
-        <TextView style="@style/DashboardText" android:text="@string/home_not_available"
-            android:textColor="@color/text_primary" />
+            android:text="@string/app_name" android:textSize="32sp" />
         <TextView android:id="@+id/home_operation_status" style="@style/DashboardText"
-            android:text="@string/operation_waiting" android:textColor="@color/text_primary" />
+            android:text="@string/operation_waiting" android:textColor="@color/text_primary" android:layout_marginBottom="8dp" />
         <TextView android:id="@+id/home_voice_status" style="@style/DashboardText"
-            android:text="@string/tts_initializing" />
+            android:text="@string/tts_initializing" android:textSize="16sp" android:layout_marginBottom="8dp"
+            android:accessibilityLiveRegion="polite" />
         <Button android:id="@+id/listen_status" style="@style/DashboardButton.Primary"
             android:layout_height="0dp" android:layout_weight="1" android:minHeight="80dp"
-            android:textSize="28sp" android:text="@string/central_object" android:enabled="false" />
+            android:textSize="28sp" android:text="@string/central_object" android:contentDescription="@string/central_object_description"
+            android:drawablePadding="8dp" android:enabled="false" />
         <Button android:id="@+id/listen_help" style="@style/DashboardButton"
             android:layout_height="0dp" android:layout_weight="1" android:minHeight="80dp"
-            android:textSize="28sp" android:text="@string/pause_operation" />
+            android:textSize="28sp" android:text="@string/pause_operation" android:drawablePadding="8dp" />
     </LinearLayout>
     <Button android:id="@+id/open_developer" style="@style/DashboardButton"
         android:layout_width="wrap_content" android:layout_alignParentBottom="true" android:layout_centerHorizontal="true"
         android:layout_marginTop="0dp" android:layout_marginBottom="8dp"
         android:minHeight="48dp" android:textSize="14sp" android:padding="12dp"
-        android:text="@string/developer_mode" />
+        android:text="@string/developer_mode" android:contentDescription="@string/developer_mode_description" />
 </RelativeLayout>

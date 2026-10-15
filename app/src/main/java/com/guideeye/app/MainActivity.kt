@@ -17,12 +17,14 @@ class MainActivity : Activity() {
     private lateinit var speech: KoreanSpeechGuide
     private var foreground = false
     private var ready = false
+    private var voiceUnavailable = false
     private var introAnnounced = false
     private var paused = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        introAnnounced = savedInstanceState?.getBoolean("introAnnounced", false) ?: false
         paused = savedInstanceState?.getBoolean("paused", false) ?: false
         updatePauseUi()
         ViewCompat.setAccessibilityHeading(findViewById(R.id.home_title), true)
@@ -40,12 +42,14 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.root).requestApplyInsets()
         speech = KoreanSpeechGuide(this) { status, available ->
             ready = available
+            voiceUnavailable = !available
             findViewById<TextView>(R.id.home_voice_status).setText(when {
                 status == R.string.tts_error -> R.string.home_voice_error
                 available -> R.string.home_voice_ready
                 else -> R.string.home_voice_unavailable
             })
             findViewById<Button>(R.id.listen_status).isEnabled = available
+            updateAccessibilityState()
             announceIntro()
         }
         findViewById<Button>(R.id.listen_status).setOnClickListener {
@@ -69,6 +73,26 @@ class MainActivity : Activity() {
     private fun updatePauseUi() {
         findViewById<Button>(R.id.listen_help).setText(if (paused) R.string.resume_operation else R.string.pause_operation)
         findViewById<TextView>(R.id.home_operation_status).setText(if (paused) R.string.operation_paused else R.string.operation_waiting)
+        val compact = resources.configuration.fontScale > 1.3f || resources.configuration.screenHeightDp < 480
+        findViewById<Button>(R.id.listen_status).setCompoundDrawablesWithIntrinsicBounds(
+            0, if (compact) 0 else R.drawable.ic_center_object, 0, 0)
+        findViewById<Button>(R.id.listen_help).setCompoundDrawablesWithIntrinsicBounds(
+            0, if (compact) 0 else if (paused) R.drawable.ic_resume else R.drawable.ic_pause, 0, 0)
+        updateAccessibilityState()
+    }
+
+    private fun updateAccessibilityState() {
+        val centralState = when {
+            voiceUnavailable -> R.string.voice_unavailable_state
+            !ready -> R.string.voice_preparing_state
+            paused -> R.string.central_object_paused_state
+            else -> R.string.central_object_not_ready_state
+        }
+        ViewCompat.setStateDescription(findViewById(R.id.listen_status), getString(centralState))
+        val toggle = findViewById<Button>(R.id.listen_help)
+        toggle.contentDescription = getString(if (paused) R.string.resume_description else R.string.pause_description)
+        ViewCompat.setStateDescription(toggle,
+            getString(if (paused) R.string.pause_state_paused else R.string.pause_state_active))
     }
 
     private fun announceIntro() {
@@ -79,12 +103,15 @@ class MainActivity : Activity() {
                 val landscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                 val pauseLabel = getString(if (paused) R.string.resume_operation else R.string.pause_operation)
                 val intro = getString(if (landscape) R.string.home_intro_landscape else R.string.home_intro, pauseLabel)
-                speech.announceButton(if (paused) getString(R.string.operation_paused_message) + " " + intro else intro)
+                val message = (if (paused) getString(R.string.operation_paused_message) + " " + intro else intro) +
+                    " " + getString(R.string.home_touch_help)
+                speech.announceButton(message)
             }
         }
     }
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("paused", paused)
+        outState.putBoolean("introAnnounced", introAnnounced)
         super.onSaveInstanceState(outState)
     }
     override fun onStart() { super.onStart(); foreground = true; announceIntro() }
