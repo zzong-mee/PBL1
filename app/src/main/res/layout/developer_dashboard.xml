@@ -42,6 +42,9 @@
         <LinearLayout style="@style/DashboardCard">
             <TextView android:id="@+id/heading_camera" style="@style/DashboardHeading" android:text="@string/section_camera" />
             <TextView android:id="@+id/camera_status" style="@style/DashboardText" android:text="@string/camera_status" />
+            <com.guideeye.app.vision.DetectionPreview android:id="@+id/camera_preview"
+                android:layout_width="match_parent" android:layout_height="260dp"
+                android:background="#142532" android:importantForAccessibility="no" />
             <TextView android:id="@+id/video" style="@style/DashboardText" android:background="@drawable/bg_notice"
                 android:padding="20dp" android:gravity="center" android:text="@string/video_placeholder" />
         </LinearLayout>

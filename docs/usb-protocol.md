@@ -1,5 +1,8 @@
 # Third Eye USB 통신 설계
 
+0.6.0부터 아래 GEYE v1 프레임 수신을 구현했다. 거리 payload는 현재 `{"left_mm":500,"right_mm":1200}` 형식이며 측정 실패는 null이다. 카메라 펌웨어·실기기 통합 검증은 남아 있다.
+상세 실행·제한: [외부 카메라 개발](external-camera.md).
+
 ## 확정된 구성
 
 Galaxy A34(Android 16)가 USB Host, XIAO ESP32-S3 Sense가 USB Device이다.
@@ -7,13 +10,13 @@ ESP32-S3가 카메라 영상과 I²C 연결된 VL53L8CX 두 개의 측정값을 
 스마트폰이 YOLO 추론, 위험도 분석 및 한국어 TTS를 처리한다. Wi-Fi/Bluetooth는 사용하지 않는다.
 현재 앱은 Mock과 USB Serial JSON 거리 수신을 제공한다. Android USB Host API로
 Espressif VID 0x303A의 단일 CDC ACM 장치에서 115200/8N1, DTR·RTS 활성화를 요청한다.
-연결 버튼, 권한 거절, 분리, 통신 오류, 4초 유효 데이터 timeout을 처리한다.
+연결 버튼, 권한 거절, 분리, 통신 오류, 4초 유효 데이터 timeout을 처리한다. 0.6.0에서는 유효한 영상/거리 패킷 수신이 연결 유지를 갱신한다. 영상 안내에는 2초 최신 결과 제한이 별도로 적용된다.
 백그라운드에서는 연결을 닫고 복귀 후 사용자가 다시 연결한다.
 실제 Galaxy/XIAO에서 이번 앱 수신 구현은 아직 검증하지 않았다.
 
 현재 wire format은 LF/CRLF 종료 JSON `{"left_mm":500,"right_mm":1200}`이다.
 512바이트 줄 제한, 양쪽 정수 1~100000mm 검증, 분할·병합 수신을 지원한다.
-아래 바이너리 프레임 규격은 **추후 JPEG 혼합 전송을 위한 제안**이며 현재 파서가 지원하지 않는다.
+아래 바이너리 프레임을 현재 파서가 지원한다. 기존 LF/CRLF JSON도 유지한다.
 
 ## 단계별 구현
 
@@ -30,9 +33,9 @@ Espressif VID 0x303A의 단일 CDC ACM 장치에서 115200/8N1, DTR·RTS 활성�
 4. 먼저 거리 패킷 수신을 실제 두 센서와 검증한다. 다음으로 JPEG 프레임을 제한된 속도로 전송하여
    메모리, 전송률, 추론 지연, 센서 패킷 지연을 측정한 뒤 카메라 수신을 구현한다.
 
-## 통신 프로토콜 v1 제안
+## 통신 프로토콜 v1
 
-다음은 펌웨어와 함께 확정해야 하는 제안이며, 이미 지원되는 규격이라는 의미가 아니다.
+다음은 카메라 검증용 펌웨어와 Android 파서가 사용하는 규격이며, 실제 USB 전송 검증은 아직 남아 있다.
 USB read의 경계는 패킷 경계가 아니므로 분할·병합된 바이트를 누적 파싱한다.
 
 | 필드 | 크기 | 의미 |
@@ -41,7 +44,7 @@ USB read의 경계는 패킷 경계가 아니므로 분할·병합된 바이트�
 | Version | 1 | 1 |
 | Type | 1 | 1=거리, 2=JPEG, 3=상태 |
 | Payload length | 4 | unsigned little-endian, payload 바이트 수 |
-| Sequence | 4 | unsigned little-endian, 타입별 증가, wrap 허용 |
+| Sequence | 4 | unsigned little-endian, 전체 패킷 증가, wrap 허용 |
 | Capture timestamp | 4 | ESP32 uptime ms, little-endian, wrap 허용 |
 | Payload | 가변 | 타입별 내용 |
 | CRC32 | 4 | Version부터 Payload 끝까지 CRC-32/ISO-HDLC, little-endian |
@@ -52,7 +55,7 @@ CRC 오류·지원하지 않는 버전·허용 범위 밖 길이는 폐기하고
 Magic이 JPEG 내부에도 나타날 수 있으므로 정상 프레임은 길이와 CRC로 읽는다.
 미완성 프레임 시간 제한 및 전체 버퍼 상한도 둔다.
 
-거리 payload는 UTF-8 JSON을 제안한다:
+현재 거리 payload는 `{"left_mm":500,"right_mm":1200}` 또는 측정 실패 시 null을 사용한다. 아래 zone/valid 스키마는 추후 버전 확장 제안이다:
 
 ```json
 {"left":{"mm":500,"valid":true},"right":{"mm":1200,"valid":true}}

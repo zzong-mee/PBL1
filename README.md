@@ -1,10 +1,11 @@
 # Third Eye
 
-**현재 앱 버전: 0.5.1** · versionCode: 7
+**현재 앱 버전: 0.6.0** · versionCode: 8
 
 시각장애인을 위한 Android AI 보행 보조 앱. 현재 **사용자용 시작 화면과 별도의 개발자 화면**을 제공하는 개발 버전이다.
 Mock 거리와 USB Serial JSON 수신은 개발자 모드에서 테스트한다.
-실제 장애물 감지나 위험도 판단을 수행하지 않으며 보행 안전을 보장하는 앱이 아니다.
+외부 USB JPEG의 일반 사물 탐지·중앙 물체 안내를 추가했으며 실제 장치 통합은 검증 전이다.
+거리 센서 실측·위험도 판단·자동 보행 안내는 아직 완성되지 않았다. 상세 범위는 [외부 카메라 개발 문서](docs/external-camera.md)를 참고한다.
 
 ## 기존 저장소 분석
 
@@ -14,7 +15,7 @@ Mock 거리와 USB Serial JSON 수신은 개발자 모드에서 테스트한다.
 ## 구현한 기능
 
 - Third Eye 메인 화면, USB 카메라·실제 좌우 센서 미연결 표시
-- 카메라 영상 대기, AI 미구현 및 위험도 미평가 상태
+- 외부 JPEG 수신과 YOLOX-Nano 중앙 물체 인식, 개발자 모드 미리보기·탐지 박스 (실기기 검증 전), 위험도 미평가
 - 2초 주기로 변하는 가상 좌우 거리(미터), 갱신 정지/시작 버튼
 - Android TextToSpeech 한국어 지원 확인 후 활성화되는 음성 테스트 버튼
 - 음성 엔진 준비·사용 불가·재생 오류·완료 상태와 최근 요청 문구
@@ -27,6 +28,7 @@ Mock 거리와 USB Serial JSON 수신은 개발자 모드에서 테스트한다.
 - JDK 17 이상 (클라우드 검증은 JDK 21), Gradle 8.13 Wrapper
 - Android SDK Platform 36, Build Tools 35.0.0
 - Kotlin 2.1.20, XML 기반 Android 기본 View, minSdk 26 / targetSdk 36
+- ONNX Runtime Android 1.31.0: 번들 YOLOX-Nano 모델의 로컬 CPU 추론
 - AndroidX Core 1.17.0: Android 버전별 안전한 BroadcastReceiver 등록에 사용. USB 전송은 Android 기본 Host API 사용
 - JUnit 4.13.2는 단위 테스트, org.json 20260814는 Android 기본 JSON 파서의 JVM 테스트 대체 구현에만 사용
 
@@ -100,13 +102,13 @@ USB 연결 성공은 카메라 연결이나 실제 센서 측정 성공을 뜻�
 
 후속 단계에서는 ESP32-S3가 I²C 센서 두 개를 읽도록 펌웨어를 추가하고,
 JPEG 프레임 전송을 실제 보드와 검증한다.
-YOLO, 센서 융합, 위험도/중복 음성 억제는 후속 단계이며 현재 구현 범위에 포함하지 않는다.
+YOLOX-Nano의 USB JPEG 추론을 추가했다. 실제 ToF 측정 연동, 센서 융합, 위험도/중복 음성 억제는 후속 단계다.
 
 ## 클라우드 검증 결과
 
 - `assembleDebug`: 성공, `app/build/outputs/apk/debug/app-debug.apk` 생성
-- `testDebugUnitTest`: Mock 1개 + USB JSON decoder 3개 + 버튼 터치 상태 5개, 총 9개 통과 (실패/오류/건너뜀 0)
-- `lintDebug`: 오류/경고 0
+- `testDebugUnitTest`: Mock 1개 + USB JSON 3개 + 버튼 터치 5개 + 혼합 패킷 4개 + 중앙 선택 3개 + YOLO 좌표 2개, 총 18개 (실패/오류/건너뜀 0)
+- `lintDebug`: 오류 0, ChromeOS x86_64 ABI 경고 1 (Galaxy A34 ARM64 대상 패키징)
 - 검증 도구: JDK 21.0.12.1, Gradle 8.13, Android SDK 36
 - SDK/JDK/Gradle 캐시는 `/workspace/tooling`에 유지되며, 클라우드에서는
   `. /workspace/tooling/guideeye-env.sh` 후 위 Gradle 명령을 실행한다.
@@ -195,3 +197,10 @@ TalkBack 켜기/끄기, 큰 글꼴, TTS 미준비/사용 불가 상태도 확인
 접촉/실행/취소 진동, 한국어 음성 미설치, 글꼴 확대와 가로 화면에서 버튼/하단 개발자 모드 노출.
 실제 시각장애인 사용자에게 위치 탐색과 취소 방법의 이해·실수 빈도를 확인해야 하며,
 자동 빌드·Lint·기존 단위 테스트 통과만으로 사용성이 검증된 것은 아니다.
+
+## 외부 카메라 전환 (0.6.0)
+
+사용자 요청에 따라 스마트폰 CameraX 대신 XIAO ESP32-S3 Sense의 USB JPEG를 입력으로 사용한다.
+상세 설정·모델 라이선스·새 펌웨어 및 검증 한계는 [docs/external-camera.md](docs/external-camera.md)에 있다.
+**이전 JSON 전용 펌웨어만으로는 영상이 전송되지 않는다.** 새 카메라 검증용 펌웨어는
+거리 센서 배선 확인과 ESP32 빌드·실기기 검증이 남아 있다. 거리 실측 연동은 배선 사진 확인 후 진행한다.

@@ -9,6 +9,9 @@ import com.guideeye.app.accessibility.ButtonTouchFeedback
 import com.guideeye.app.data.DistanceSource
 import com.guideeye.app.data.MockDistanceSource
 import com.guideeye.app.speech.KoreanSpeechGuide
+import com.guideeye.app.vision.ExternalVisionController
+import com.guideeye.app.vision.DetectionPreview
+import com.guideeye.app.vision.YoloXDetector
 import com.guideeye.app.usb.UsbDistanceController
 
 class DeveloperActivity : Activity() {
@@ -17,6 +20,8 @@ class DeveloperActivity : Activity() {
     private var mockEnabled = true
     private var usbMode = false
     private lateinit var usb: UsbDistanceController
+    private lateinit var vision: ExternalVisionController
+    private var lastSensorAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,16 +45,41 @@ class DeveloperActivity : Activity() {
         findViewById<View>(R.id.root).requestApplyInsets()
         usbMode = savedInstanceState?.getBoolean("usbMode", false) ?: false
         mockEnabled = savedInstanceState?.getBoolean("mockEnabled", true) ?: true
+        vision = ExternalVisionController(this, { code ->
+            findViewById<TextView>(R.id.camera_status).setText(code)
+        }, { bitmap, detections, elapsed ->
+            findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections)
+            val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence*100).toInt()}%" }
+            findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed, objects)
+        })
         usb = UsbDistanceController(this, { status ->
             if (usbMode) {
                 findViewById<TextView>(R.id.mock_status).setText(status)
-                if (status != R.string.usb_receiving) clearUsbDistances()
+                if (status == R.string.usb_receiving) {
+                    if (android.os.SystemClock.elapsedRealtime()-lastSensorAt > 2000) clearUsbDistances()
+                    if (!vision.hasFreshFrame()) {
+                        findViewById<DetectionPreview>(R.id.camera_preview).clear()
+                        findViewById<TextView>(R.id.camera_status).setText(R.string.external_waiting)
+                        findViewById<TextView>(R.id.video).setText(R.string.video_placeholder)
+                    }
+                }
+                if (status != R.string.usb_receiving) {
+                    clearUsbDistances()
+                    vision.stop()
+                    findViewById<DetectionPreview>(R.id.camera_preview).clear()
+                    findViewById<TextView>(R.id.camera_status).setText(status)
+                    findViewById<TextView>(R.id.video).setText(R.string.video_placeholder)
+                }
             }
         }, { reading ->
             if (usbMode) {
                 findViewById<TextView>(R.id.left_distance).text = getString(R.string.usb_left, reading.leftMeters)
                 findViewById<TextView>(R.id.right_distance).text = getString(R.string.usb_right, reading.rightMeters)
             }
+        }, { bytes, received -> vision.acceptJpeg(bytes,received) }, { left,right ->
+            lastSensorAt = android.os.SystemClock.elapsedRealtime()
+            findViewById<TextView>(R.id.left_distance).text = left?.let { getString(R.string.usb_left,it/1000f) } ?: getString(R.string.usb_left_waiting)
+            findViewById<TextView>(R.id.right_distance).text = right?.let { getString(R.string.usb_right,it/1000f) } ?: getString(R.string.usb_right_waiting)
         })
         findViewById<Button>(R.id.connect_usb).setOnClickListener {
             usbMode = true
@@ -58,6 +88,10 @@ class DeveloperActivity : Activity() {
         }
         findViewById<Button>(R.id.use_mock).setOnClickListener {
             usb.disconnect()
+            vision.stop()
+            findViewById<DetectionPreview>(R.id.camera_preview).clear()
+            findViewById<TextView>(R.id.camera_status).setText(R.string.camera_status)
+            findViewById<TextView>(R.id.video).setText(R.string.video_placeholder)
             usbMode = false
             updateMode()
         }
@@ -120,6 +154,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { distances.stop(); usb.stop(); speech.stop(); super.onStop() }
-    override fun onDestroy() { usb.close(); speech.close(); super.onDestroy() }
+    override fun onStop() { distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onDestroy() { usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }
