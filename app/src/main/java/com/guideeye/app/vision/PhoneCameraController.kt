@@ -108,9 +108,12 @@ class PhoneCameraController(private val activity: Activity, private val status: 
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                 set(CaptureRequest.JPEG_ORIENTATION, (sensorOrientation - rotation + 360) % 360)
             }.build()
+            val requestedAt = SystemClock.elapsedRealtime()
             session?.capture(request, object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureCompleted(s: CameraCaptureSession, r: CaptureRequest, result: TotalCaptureResult) {
-                    main.postDelayed({ capture(token) }, 500)
+                    // Target 10 capture requests/sec without overlapping still captures.
+                    val delay = maxOf(0L, 100L - (SystemClock.elapsedRealtime() - requestedAt))
+                    main.postDelayed({ capture(token) }, delay)
                 }
                 override fun onCaptureFailed(s: CameraCaptureSession, r: CaptureRequest, failure: CaptureFailure) { fail(token) }
             }, main)

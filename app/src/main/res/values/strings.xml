@@ -95,5 +95,5 @@
     <string name="phone_ready">휴대폰 후면 카메라 객체 인식 중</string>
     <string name="phone_error">휴대폰 카메라를 사용할 수 없습니다. 다른 카메라 앱을 닫고 일시정지 후 다시 시작하세요.</string>
     <string name="phone_preview_start">휴대폰 카메라 보기 / 다시 연결</string>
-    <string name="phone_preview_help">후면 카메라의 분석 영상을 표시합니다. 노란 점은 영상의 정중앙이며, 노란 사각형은 중앙 탐색 영역입니다. 약 0.5초 간격으로 촬영하며 분석 속도에 따라 갱신됩니다. 거리 수치는 별도의 Mock 또는 USB 데이터입니다.</string>
+    <string name="phone_preview_help">후면 카메라의 분석 영상을 표시합니다. 노란 점은 영상의 정중앙이며, 노란 사각형은 중앙 탐색 영역입니다. 0.1초 간격으로 촬영을 요청하며 실제 촬영·분석 속도에 따라 갱신됩니다. 거리 수치는 별도의 Mock 또는 USB 데이터입니다.</string>
 </resources>
