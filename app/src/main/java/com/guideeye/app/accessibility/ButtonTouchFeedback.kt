@@ -5,26 +5,62 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityManager
 import android.widget.Button
+import com.guideeye.app.R
 
-/**
- * Adds feedback on contact, preserving Button's native release-to-click and scroll/cancel behavior.
- * Returning false is intentional: keyboard, Switch Access and performClick still use the same action.
- */
 object ButtonTouchFeedback {
-    // This observer never consumes a touch or detects a click. Button.onTouchEvent performs
-    // the click itself; calling performClick here as well would execute the action twice.
+    // Stock Button inherits performClick; this listener calls it explicitly on valid release.
+    // Lint's custom-view override check does not apply to this unmodified framework widget.
     @SuppressLint("ClickableViewAccessibility")
     fun install(button: Button, announce: (String) -> Unit) {
         val accessibility = button.context.getSystemService(AccessibilityManager::class.java)
+        val gesture = ReleaseGesture()
         button.setOnTouchListener { view, event ->
-            if (event.actionMasked == MotionEvent.ACTION_DOWN && view.isEnabled &&
-                !accessibility.isTouchExplorationEnabled) {
-                // Respect the device's touch-feedback settings instead of forcing vibration.
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                announce(button.text.toString().replace("/", " 또는 "))
+            if (accessibility.isTouchExplorationEnabled) {
+                gesture.cancel()
+                view.isPressed = false
+                view.parent?.requestDisallowInterceptTouchEvent(false)
+                // Let TalkBack and native Button handle accessibility activation.
+                return@setOnTouchListener false
             }
-            // Native Button executes on ACTION_UP, not DOWN; leaving/scrolling cancels the click.
-            false
+            fun inside(index: Int): Boolean = index >= 0 &&
+                event.getX(index) >= 0 && event.getX(index) < view.width &&
+                event.getY(index) >= 0 && event.getY(index) < view.height
+            fun cancelWithFeedback(newlyCancelled: Boolean = gesture.cancel()) {
+                if (newlyCancelled) {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    announce(view.context.getString(R.string.button_cancelled))
+                }
+                view.isPressed = false
+            }
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    gesture.begin(event.getPointerId(0))
+                    // Keep this entire gesture on the original button, even after leaving its bounds.
+                    // Otherwise ScrollView intercepts MOVE and the user cannot deliberately cancel.
+                    view.parent?.requestDisallowInterceptTouchEvent(true)
+                    view.isPressed = true
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    announce(button.text.toString().replace("/", " 또는 "))
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val newlyCancelled = gesture.move(inside(event.findPointerIndex(gesture.pointerId)))
+                    if (newlyCancelled) cancelWithFeedback(true)
+                }
+                MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP -> cancelWithFeedback()
+                MotionEvent.ACTION_UP -> {
+                    val click = gesture.release(event.getPointerId(event.actionIndex), inside(event.actionIndex))
+                    view.isPressed = false
+                    view.parent?.requestDisallowInterceptTouchEvent(false)
+                    // Same click path as TalkBack, keyboard and Switch Access. Execute only once.
+                    if (click && view.isEnabled) view.performClick()
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    gesture.cancel()
+                    view.isPressed = false
+                    view.parent?.requestDisallowInterceptTouchEvent(false)
+                }
+            }
+            true
         }
     }
 }
