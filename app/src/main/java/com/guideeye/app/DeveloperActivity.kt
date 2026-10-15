@@ -9,6 +9,7 @@ import com.guideeye.app.accessibility.ButtonTouchFeedback
 import com.guideeye.app.data.DistanceSource
 import com.guideeye.app.data.MockDistanceSource
 import com.guideeye.app.speech.KoreanSpeechGuide
+import com.guideeye.app.vision.PhoneCameraController
 import com.guideeye.app.vision.ExternalVisionController
 import com.guideeye.app.vision.DetectionPreview
 import com.guideeye.app.vision.YoloXDetector
@@ -21,6 +22,8 @@ class DeveloperActivity : Activity() {
     private var usbMode = false
     private lateinit var usb: UsbDistanceController
     private lateinit var vision: ExternalVisionController
+    private lateinit var phone: PhoneCameraController
+    private var foreground = false
     private var lastSensorAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +55,28 @@ class DeveloperActivity : Activity() {
             val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence*100).toInt()}%" }
             findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed, objects)
         })
+        phone = PhoneCameraController(this, { code ->
+            if (!usbMode) {
+                findViewById<TextView>(R.id.camera_status).setText(code)
+                if (code != R.string.phone_ready) {
+                    findViewById<DetectionPreview>(R.id.camera_preview).clear()
+                    findViewById<TextView>(R.id.video).setText(R.string.phone_preview_help)
+                }
+            }
+        }, { bitmap, detections, elapsed ->
+            if (!usbMode && foreground) {
+                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap, detections)
+                val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence * 100).toInt()}%" }
+                findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed, objects)
+            } else bitmap.recycle()
+        })
+        findViewById<Button>(R.id.use_phone_camera).setOnClickListener {
+            usb.disconnect()
+            vision.stop()
+            usbMode = false
+            updateMode()
+            startPhoneCamera()
+        }
         usb = UsbDistanceController(this, { status ->
             if (usbMode) {
                 findViewById<TextView>(R.id.mock_status).setText(status)
@@ -83,6 +108,8 @@ class DeveloperActivity : Activity() {
         })
         findViewById<Button>(R.id.connect_usb).setOnClickListener {
             usbMode = true
+            phone.stop()
+            findViewById<DetectionPreview>(R.id.camera_preview).clear()
             updateMode()
             usb.connect()
         }
@@ -94,6 +121,7 @@ class DeveloperActivity : Activity() {
             findViewById<TextView>(R.id.video).setText(R.string.video_placeholder)
             usbMode = false
             updateMode()
+            startPhoneCamera()
         }
         findViewById<Button>(R.id.back_to_user).setOnClickListener { finish() }
         val testButton = findViewById<Button>(R.id.speech_test)
@@ -112,15 +140,32 @@ class DeveloperActivity : Activity() {
             mockEnabled = !mockEnabled
             updateMock()
         }
-        listOf(R.id.back_to_user, R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.speech_test).forEach {
+        listOf(R.id.back_to_user, R.id.use_phone_camera, R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.speech_test).forEach {
             ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
         }
     }
 
     override fun onStart() {
         super.onStart()
+        foreground = true
         usb.start()
         updateMode()
+        if (!usbMode) startPhoneCamera()
+    }
+    private fun startPhoneCamera() {
+        if (!foreground || usbMode) return
+        phone.start()
+        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            findViewById<TextView>(R.id.camera_status).setText(R.string.phone_permission)
+            requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 101)
+        } else phone.connect()
+    }
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 101 && foreground && !usbMode) {
+            if (grantResults.firstOrNull() == android.content.pm.PackageManager.PERMISSION_GRANTED) startPhoneCamera()
+            else findViewById<TextView>(R.id.camera_status).setText(R.string.phone_permission)
+        }
     }
     private fun clearUsbDistances() {
         findViewById<TextView>(R.id.left_distance).setText(R.string.usb_left_waiting)
@@ -154,6 +199,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
-    override fun onDestroy() { usb.close(); vision.close(); speech.close(); super.onDestroy() }
+    override fun onStop() { foreground = false; phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onDestroy() { phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }

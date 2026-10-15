@@ -12,11 +12,12 @@ import android.view.Surface
 import com.guideeye.app.R
 
 /** Foreground-only rear camera adapter. JPEG frames reuse the existing bounded inference worker. */
-class PhoneCameraController(private val activity: Activity, private val status: (Int) -> Unit) {
+class PhoneCameraController(private val activity: Activity, private val status: (Int) -> Unit,
+    result: (android.graphics.Bitmap, List<Detection>, Long) -> Unit = { bitmap, _, _ -> bitmap.recycle() }) {
     private val main = Handler(activity.mainLooper)
     private val vision = ExternalVisionController(activity, { code ->
         status(if (code == R.string.external_vision_ready) R.string.phone_ready else code)
-    })
+    }, result)
     private var device: CameraDevice? = null
     private var session: CameraCaptureSession? = null
     private var reader: ImageReader? = null
@@ -54,6 +55,7 @@ class PhoneCameraController(private val activity: Activity, private val status: 
             val output = ImageReader.newInstance(size.width, size.height, ImageFormat.JPEG, 2)
             reader = output
             output.setOnImageAvailableListener({ source ->
+                if (token != generation || !active) return@setOnImageAvailableListener
                 val image = source.acquireLatestImage() ?: return@setOnImageAvailableListener
                 try {
                     if (token == generation && active) {
