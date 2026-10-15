@@ -1,49 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:fillViewport="true" android:clipToPadding="false">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="20dp">
-        <TextView android:id="@+id/title" style="@style/DashboardHeading"
+    >
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_above="@id/open_developer" android:orientation="vertical" android:padding="20dp">
+        <TextView android:id="@+id/home_title" style="@style/DashboardHeading"
             android:text="@string/app_name" android:textSize="36sp" />
-        <TextView android:id="@+id/subtitle" style="@style/DashboardText" android:text="@string/subtitle" />
-
-        <LinearLayout style="@style/DashboardCard">
-            <TextView android:id="@+id/heading_connection" style="@style/DashboardHeading" android:text="@string/section_connection" />
-            <TextView android:id="@+id/notice" style="@style/DashboardText"
-                android:background="@drawable/bg_notice" android:padding="16dp"
-                android:textColor="@color/text_primary" android:text="@string/mock_notice" />
-            <TextView android:id="@+id/mock_status" style="@style/DashboardText" android:text="@string/mock_running" />
-            <TextView android:id="@+id/sensor_status" style="@style/DashboardText" android:text="@string/sensor_status" />
-            <Button android:id="@+id/connect_usb" style="@style/DashboardButton.Primary" android:text="@string/usb_connect" />
-            <Button android:id="@+id/use_mock" style="@style/DashboardButton" android:text="@string/usb_mock" />
-            <Button android:id="@+id/toggle_mock" style="@style/DashboardButton" android:text="@string/pause_mock" />
-        </LinearLayout>
-
-        <LinearLayout style="@style/DashboardCard">
-            <TextView android:id="@+id/heading_distance" style="@style/DashboardHeading" android:text="@string/section_distance" />
-            <TextView android:id="@+id/left_distance" style="@style/DashboardDistance" android:text="@string/left_waiting" />
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/surface_border"
-                android:importantForAccessibility="no" />
-            <TextView android:id="@+id/right_distance" style="@style/DashboardDistance" android:text="@string/right_waiting" />
-            <TextView android:id="@+id/risk" style="@style/DashboardText" android:text="@string/risk_pending" />
-        </LinearLayout>
-
-        <LinearLayout style="@style/DashboardCard">
-            <TextView android:id="@+id/heading_voice" style="@style/DashboardHeading" android:text="@string/section_voice" />
-            <TextView style="@style/DashboardText" android:text="@string/touch_instructions" />
-            <TextView android:id="@+id/tts_status" style="@style/DashboardText" android:text="@string/tts_initializing" />
-            <Button android:id="@+id/speech_test" style="@style/DashboardButton.Primary" android:text="@string/speech_test" />
-            <TextView style="@style/DashboardText" android:layout_marginTop="16dp" android:text="@string/accessibility_instructions" />
-            <TextView android:id="@+id/recent_speech" style="@style/DashboardText" android:layout_marginTop="16dp"
-                android:text="@string/speech_idle" />
-        </LinearLayout>
-
-        <LinearLayout style="@style/DashboardCard">
-            <TextView android:id="@+id/heading_camera" style="@style/DashboardHeading" android:text="@string/section_camera" />
-            <TextView android:id="@+id/camera_status" style="@style/DashboardText" android:text="@string/camera_status" />
-            <TextView android:id="@+id/video" style="@style/DashboardText" android:background="@drawable/bg_notice"
-                android:padding="20dp" android:gravity="center" android:text="@string/video_placeholder" />
-        </LinearLayout>
+        <TextView style="@style/DashboardText" android:text="@string/home_not_available"
+            android:textColor="@color/text_primary" />
+        <TextView android:id="@+id/home_voice_status" style="@style/DashboardText"
+            android:text="@string/tts_initializing" />
+        <Button android:id="@+id/listen_status" style="@style/DashboardButton.Primary"
+            android:layout_height="0dp" android:layout_weight="1" android:minHeight="80dp"
+            android:textSize="28sp" android:text="@string/listen_status" android:enabled="false" />
+        <Button android:id="@+id/listen_help" style="@style/DashboardButton"
+            android:layout_height="0dp" android:layout_weight="1" android:minHeight="80dp"
+            android:textSize="28sp" android:text="@string/listen_help" android:enabled="false" />
     </LinearLayout>
-</ScrollView>
+    <Button android:id="@+id/open_developer" style="@style/DashboardButton"
+        android:layout_width="wrap_content" android:layout_alignParentBottom="true" android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp" android:layout_marginBottom="8dp"
+        android:minHeight="48dp" android:textSize="14sp" android:padding="12dp"
+        android:text="@string/developer_mode" />
+</RelativeLayout>

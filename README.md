@@ -1,8 +1,9 @@
 # Third Eye
 
-**현재 앱 버전: 0.3.1** · versionCode: 4
+**현재 앱 버전: 0.4.0** · versionCode: 5
 
-시각장애인을 위한 Android AI 보행 보조 앱. 현재 **Mock 화면과 USB Serial 거리 JSON 수신**을 제공하는 개발 버전이다.
+시각장애인을 위한 Android AI 보행 보조 앱. 현재 **사용자용 시작 화면과 별도의 개발자 화면**을 제공하는 개발 버전이다.
+Mock 거리와 USB Serial JSON 수신은 개발자 모드에서 테스트한다.
 실제 장애물 감지나 위험도 판단을 수행하지 않으며 보행 안전을 보장하는 앱이 아니다.
 
 ## 기존 저장소 분석
@@ -46,7 +47,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 파일 구조
 
-- `MainActivity.kt`: 화면 바인딩 및 lifecycle 제어
+- `MainActivity.kt`: 스크롤 없는 사용자용 시작 화면, 상태/사용법 음성 안내
+- `DeveloperActivity.kt`: USB·Mock·TTS 개발 대시보드 및 lifecycle 제어
 - `data/DistanceSource.kt`: 거리 입력 교체 지점
 - `data/MockDistanceSource.kt`, `MockSequence.kt`: Mock 주기와 재현 가능한 거리 샘플
 - `speech/KoreanSpeechGuide.kt`: 한국어 TTS 초기화·출력·정리
@@ -57,7 +59,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Galaxy A34 기본 기능 확인 항목
 
-1. Android 16에서 앱 실행, 상태 표시와 시스템 바 겹침 여부 확인.
+1. Android 16에서 사용자용 시작 화면과 하단 개발자 모드 버튼 표시, 시스템 바 겹침 여부 확인.
+   이후 가상 거리·TTS 테스트는 **개발자 모드**에서 수행한다.
 2. 좌우 거리가 2초마다 변하고 정지/시작 버튼이 동작하는지 확인.
 3. 음성 엔진 준비 후 버튼을 누르면 한국어 테스트 안내가 들리는지 확인.
 4. 한국어 음성 미설치 시 버튼 비활성화와 안내 문구 확인.
@@ -75,7 +78,7 @@ USB Serial 터미널 앱에서 통신이 된 사실만으로 모든 descriptor �
 2. Serial USB Terminal 앱에서 Disconnect 후 앱을 종료해 USB interface를 해제한다.
 3. XIAO에 `firmware/ThirdEyeUsbTest/ThirdEyeUsbTest.ino`를 업로드한다.
    보드 `XIAO_ESP32S3`, `USB CDC On Boot: Enabled`를 사용한다.
-4. XIAO를 휴대폰에 USB로 연결하고 Third Eye의 **USB 연결 / 다시 연결**을 누른다.
+4. XIAO를 휴대폰에 USB로 연결하고 Third Eye 하단 **개발자 모드 → USB 연결 / 다시 연결**을 누른다.
 5. USB 접근 권한을 허용한다. 좌측 **0.50미터**, 우측 **1.20미터**가 표시되어야 한다.
    이 값은 펌웨어의 고정 테스트 값이며 실제 센서 실측이 아니다.
 6. 케이블 분리 시 분리 상태가 표시되고 거리 값이 지워지는지 확인한다.
@@ -135,3 +138,24 @@ TalkBack 켜기/끄기, 큰 글꼴, TTS 미준비/사용 불가 상태도 확인
 스크롤은 버튼 밖의 글자나 빈 공간에서 시작한다.
 실기기에서 버튼 길게 유지 → 밖으로 이동 → 다시 안으로 이동 → 손 떼기(실행 없음),
 정상 누르기/떼기(한 번 실행), 빈 공간 스크롤을 확인해야 한다.
+
+## 사용자 화면 / 개발자 모드 (0.4.0)
+
+앱의 기본 진입점 MainActivity는 스크롤 없는 사용자용 화면이다.
+큰 **상태 듣기**, **사용 방법 듣기** 버튼을 제공하고 하단에 작은 **개발자 모드** 버튼을 고정한다.
+개발자 버튼도 최소 48dp의 터치 영역과 이름 읽기·진동·취소 동작을 제공한다.
+한국어 TTS가 준비되면 TalkBack 터치 탐색을 사용하지 않는 경우 처음 화면의 버튼 위치를 음성으로 안내한다.
+가로 화면에서는 주요 버튼을 좌우로 배치한다.
+
+보행 안내가 아직 구현되지 않았으므로 사용자 화면에서 사용 불가 상태를 명시한다.
+상태/사용법 음성은 제공하지만 실제 보행 안내 시작 동작을 구현한 것처럼 표시하지 않는다.
+사용자 화면은 Mock 갱신이나 USB 연결을 시작하지 않는다.
+
+개발자 모드는 별도 DeveloperActivity로 분리했다.
+기존 USB 연결·Mock·거리·음성 테스트·카메라 상태를 이곳에 유지한다.
+상단 고정 **사용자 화면으로 돌아가기** 또는 시스템 뒤로가기로 돌아올 수 있다.
+개발자 화면을 떠나면 USB와 Mock 갱신은 기존 lifecycle 규칙에 따라 중지된다.
+
+기기 확인: 새로 앱 실행 → 사용자 화면 → 상태/사용법 음성 → 하단 개발자 모드 → USB/Mock 테스트 → 돌아가기.
+손가락 밀어서 취소, TalkBack, 가로 회전, 큰 글꼴에서의 배치도 확인해야 한다.
+이번 화면 전환과 배치는 실기기에서 아직 검증하지 않았다.

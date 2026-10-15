@@ -54,4 +54,16 @@
     <string name="touch_instructions">버튼을 누르면 이름과 진동을 안내하고, 손을 떼면 실행합니다. 취소하려면 버튼 밖으로 손을 옮긴 뒤 떼세요. 화면 스크롤은 버튼 밖의 글자나 빈 공간에서 시작하세요.</string>
     <string name="accessibility_instructions">TalkBack 사용 중에는 기본 탐색과 두 번 탭으로 실행합니다. 버튼 이름은 한국어 음성 준비 후 안내되며, 진동은 기기의 터치 진동 설정을 따릅니다.</string>
     <string name="button_cancelled">취소했습니다.</string>
+    <string name="developer_mode">개발자 모드</string>
+    <string name="back_to_user">사용자 화면으로 돌아가기</string>
+    <string name="listen_status">상태 듣기</string>
+    <string name="listen_help">사용 방법 듣기</string>
+    <string name="home_not_available">보행 안내는 아직 사용할 수 없습니다.</string>
+    <string name="home_intro">Third Eye입니다. 현재 보행 안내는 준비 중입니다. 위쪽 큰 버튼은 상태 듣기, 아래쪽 큰 버튼은 사용 방법 듣기입니다.</string>
+    <string name="home_intro_landscape">Third Eye입니다. 현재 보행 안내는 준비 중입니다. 왼쪽 큰 버튼은 상태 듣기, 오른쪽 큰 버튼은 사용 방법 듣기입니다.</string>
+    <string name="home_status_message">현재 장애물 감지와 보행 안내는 사용할 수 없습니다. 한국어 음성 출력을 사용할 수 있습니다.</string>
+    <string name="home_help_message">큰 버튼에 손을 대면 이름과 진동을 안내합니다. 손을 떼면 실행됩니다. 취소하려면 버튼 밖으로 손을 옮긴 뒤 떼세요. 이 화면은 스크롤할 필요가 없습니다. TalkBack 사용 중에는 기본 탐색과 두 번 탭으로 실행합니다.</string>
+    <string name="home_voice_ready">음성 안내 사용 가능</string>
+    <string name="home_voice_unavailable">한국어 음성 설정을 확인해주세요.</string>
+    <string name="home_voice_error">음성 출력 오류 · 다시 시도해주세요.</string>
 </resources>

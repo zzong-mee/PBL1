@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
+    >
+    <RelativeLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_above="@id/open_developer" android:padding="12dp">
+        <LinearLayout android:id="@+id/home_header" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView android:id="@+id/home_title" style="@style/DashboardHeading"
+            android:text="@string/app_name" android:textSize="28sp" />
+        <TextView style="@style/DashboardText" android:text="@string/home_not_available"
+            android:textColor="@color/text_primary" />
+        <TextView android:id="@+id/home_voice_status" style="@style/DashboardText"
+            android:text="@string/tts_initializing" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+            android:layout_below="@id/home_header" android:orientation="horizontal" android:baselineAligned="false">
+        <Button android:id="@+id/listen_status" style="@style/DashboardButton.Primary"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:minHeight="80dp"
+            android:textSize="28sp" android:text="@string/listen_status" android:enabled="false" />
+        <Button android:id="@+id/listen_help" style="@style/DashboardButton"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:minHeight="80dp"
+            android:textSize="28sp" android:text="@string/listen_help" android:enabled="false" />
+        </LinearLayout>
+    </RelativeLayout>
+    <Button android:id="@+id/open_developer" style="@style/DashboardButton"
+        android:layout_width="wrap_content" android:layout_alignParentBottom="true" android:layout_centerHorizontal="true"
+        android:layout_marginTop="0dp" android:layout_marginBottom="8dp"
+        android:minHeight="48dp" android:textSize="14sp" android:padding="12dp"
+        android:text="@string/developer_mode" />
+</RelativeLayout>
