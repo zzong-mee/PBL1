@@ -18,10 +18,13 @@ class MainActivity : Activity() {
     private var foreground = false
     private var ready = false
     private var introAnnounced = false
+    private var paused = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        paused = savedInstanceState?.getBoolean("paused", false) ?: false
+        updatePauseUi()
         ViewCompat.setAccessibilityHeading(findViewById(R.id.home_title), true)
         findViewById<View>(R.id.root).setOnApplyWindowInsetsListener { view, insets ->
             if (android.os.Build.VERSION.SDK_INT >= 30) {
@@ -43,14 +46,17 @@ class MainActivity : Activity() {
                 else -> R.string.home_voice_unavailable
             })
             findViewById<Button>(R.id.listen_status).isEnabled = available
-            findViewById<Button>(R.id.listen_help).isEnabled = available
             announceIntro()
         }
         findViewById<Button>(R.id.listen_status).setOnClickListener {
-            speech.speak(getString(R.string.home_status_message))
+            speech.speak(getString(if (paused) R.string.central_object_paused else R.string.central_object_unavailable))
         }
         findViewById<Button>(R.id.listen_help).setOnClickListener {
-            speech.speak(getString(R.string.home_help_message))
+            paused = !paused
+            // Stop speech already playing/queued; explicit button feedback remains available when paused.
+            speech.stop()
+            updatePauseUi()
+            speech.speak(getString(if (paused) R.string.operation_paused_message else R.string.operation_resumed_message))
         }
         findViewById<Button>(R.id.open_developer).setOnClickListener {
             startActivity(Intent(this, DeveloperActivity::class.java))
@@ -60,15 +66,26 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun updatePauseUi() {
+        findViewById<Button>(R.id.listen_help).setText(if (paused) R.string.resume_operation else R.string.pause_operation)
+        findViewById<TextView>(R.id.home_operation_status).setText(if (paused) R.string.operation_paused else R.string.operation_waiting)
+    }
+
     private fun announceIntro() {
         val exploration = getSystemService(AccessibilityManager::class.java).isTouchExplorationEnabled
         if (foreground && ready && !introAnnounced) {
             introAnnounced = true
             if (!exploration) {
                 val landscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                speech.announceButton(getString(if (landscape) R.string.home_intro_landscape else R.string.home_intro))
+                val pauseLabel = getString(if (paused) R.string.resume_operation else R.string.pause_operation)
+                val intro = getString(if (landscape) R.string.home_intro_landscape else R.string.home_intro, pauseLabel)
+                speech.announceButton(if (paused) getString(R.string.operation_paused_message) + " " + intro else intro)
             }
         }
+    }
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("paused", paused)
+        super.onSaveInstanceState(outState)
     }
     override fun onStart() { super.onStart(); foreground = true; announceIntro() }
     override fun onStop() { foreground = false; speech.stop(); super.onStop() }
