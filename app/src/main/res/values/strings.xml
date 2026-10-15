@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">Third Eye</string>
+    <string name="subtitle">AI 보행 보조 · 1단계 개발 화면</string>
+    <string name="mock_notice">가상 데이터 모드입니다. 실제 장애물을 감지하지 않습니다.</string>
+    <string name="camera_status">USB 카메라: 미연결</string>
+    <string name="sensor_status">USB 실제 좌측·우측 센서: 미연결</string>
+    <string name="video_placeholder">카메라 영상 대기
+객체 인식: 아직 구현되지 않음</string>
+    <string name="left_distance">가상 좌측 거리: %1$.1f미터</string>
+    <string name="right_distance">가상 우측 거리: %1$.1f미터</string>
+    <string name="risk_pending">위험도: 미평가 (1단계)</string>
+    <string name="speech_test">한국어 음성 안내 테스트</string>
+    <string name="speech_message">Third Eye 음성 안내 테스트입니다. 현재 가상 데이터 모드입니다.</string>
+    <string name="speech_idle">최근 음성 안내: 없음</string>
+    <string name="speech_recent">최근 음성 안내: %1$s</string>
+    <string name="tts_status">음성 상태: %1$s</string>
+    <string name="tts_initializing">한국어 음성 엔진 준비 중</string>
+    <string name="tts_ready">한국어 음성 안내 사용 가능</string>
+    <string name="tts_unavailable">한국어 음성 사용 불가. 기기의 TTS 엔진과 한국어 음성 데이터를 확인하세요.</string>
+    <string name="tts_error">음성 재생 실패. 기기의 TTS 설정과 미디어 음량을 확인하세요.</string>
+    <string name="tts_speaking">음성 안내 재생 중</string>
+    <string name="tts_done">음성 안내 완료</string>
+    <string name="mock_running">가상 거리: 2초마다 갱신 중</string>
+    <string name="mock_paused">가상 거리: 일시 정지</string>
+    <string name="pause_mock">가상 거리 갱신 정지</string>
+    <string name="resume_mock">가상 거리 갱신 시작</string>
+    <string name="left_waiting">가상 좌측 거리: 대기 중</string>
+    <string name="right_waiting">가상 우측 거리: 대기 중</string>
+</resources>
