@@ -24,6 +24,9 @@
             android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:minHeight="80dp"
             android:textSize="28sp" android:text="@string/pause_operation" android:drawablePadding="8dp" />
         </LinearLayout>
+        <Button android:id="@+id/listen_howto" style="@style/DashboardButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp"
+            android:textSize="18sp" android:text="@string/listen_howto" />
     </RelativeLayout>
     <Button android:id="@+id/open_developer" style="@style/DashboardButton"
         android:layout_width="wrap_content" android:layout_alignParentBottom="true" android:layout_centerHorizontal="true"

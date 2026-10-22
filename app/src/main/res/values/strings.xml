@@ -65,6 +65,9 @@
     <string name="pause_operation">일시정지</string>
     <string name="resume_operation">다시 시작</string>
     <string name="operation_waiting">중앙 물체 인식 준비 중</string>
+    <string name="home_status_label">현재 상태</string>
+    <string name="listen_howto">사용 방법 듣기</string>
+    <string name="home_howto_message">중앙의 큰 버튼은 중앙 물체 듣기입니다. 버튼에 손가락을 대면 이름과 진동을 안내하고, 손을 떼면 실행합니다. 취소하려면 버튼 밖으로 손가락을 옮긴 뒤 떼세요. 아래 버튼은 일시정지와 다시 시작, 사용 방법 듣기입니다.</string>
     <string name="operation_paused">일시정지됨</string>
     <string name="central_object_paused">일시정지 상태입니다. 다시 시작 버튼을 눌러 일시정지를 해제해주세요.</string>
     <string name="operation_paused_message">일시정지했습니다.</string>
