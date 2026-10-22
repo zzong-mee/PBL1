@@ -2,7 +2,6 @@ package com.guideeye.app.usb
 
 import com.guideeye.app.data.DistanceReading
 import org.json.JSONObject
-import kotlin.math.min
 import org.json.JSONTokener
 
 /** Newline-delimited UTF-8 JSON. USB read boundaries need not match line boundaries. */
