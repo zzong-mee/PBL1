@@ -1,9 +1,9 @@
 <resources>
-    <color name="screen_background">#F2F5F7</color>
+    <color name="screen_background">#F6F7F9</color>
     <color name="surface">#FFFFFF</color>
-    <color name="text_primary">#142532</color>
-    <color name="text_secondary">#435665</color>
-    <color name="accent">#00695C</color>
-    <color name="surface_border">#CCD8DE</color>
-    <color name="notice_background">#E5F2EF</color>
+    <color name="text_primary">#191F28</color>
+    <color name="text_secondary">#667085</color>
+    <color name="accent">#3182F6</color>
+    <color name="surface_border">#E5E8EB</color>
+    <color name="notice_background">#E8F3FF</color>
 </resources>
