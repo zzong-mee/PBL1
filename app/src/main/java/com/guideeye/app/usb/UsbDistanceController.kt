@@ -144,7 +144,18 @@ class UsbDistanceController(
                                     val d = n.toDouble()
                                     return if (d.isFinite() && d in 1.0..100000.0 && d % 1 == 0.0) d.toInt() else null
                                 }
-                                val left = mm("left_mm"); val right = mm("right_mm")
+                                fun zoneMinimum(key: String): Int? {
+                                    val values = json.optJSONArray(key) ?: return null
+                                    var minimum = 100001
+                                    for (i in 0 until values.length()) {
+                                        val n = values.opt(i) as? Number ?: continue
+                                        val d = n.toDouble()
+                                        if (d.isFinite() && d in 1.0..100000.0 && d % 1 == 0.0) minimum = minOf(minimum, d.toInt())
+                                    }
+                                    return minimum.takeIf { it <= 100000 }
+                                }
+                                val left = mm("left_mm") ?: zoneMinimum("left_zones_mm")
+                                val right = mm("right_mm") ?: zoneMinimum("right_zones_mm")
                                 lastValid = SystemClock.elapsedRealtime()
                                 emit(token) {
                                     status(R.string.usb_receiving)
