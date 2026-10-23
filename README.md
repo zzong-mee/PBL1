@@ -220,3 +220,38 @@ TalkBack 켜기/끄기, 큰 글꼴, TTS 미준비/사용 불가 상태도 확인
 상세 설정·모델 라이선스·새 펌웨어 및 검증 한계는 [docs/external-camera.md](docs/external-camera.md)에 있다.
 **이전 JSON 전용 펌웨어만으로는 영상이 전송되지 않는다.** 새 카메라 검증용 펌웨어는
 거리 센서 배선 확인과 ESP32 빌드·실기기 검증이 남아 있다. 거리 실측 연동은 배선 사진 확인 후 진행한다.
+
+
+## 실제 ToF 센서 테스트 브랜치
+
+이 브랜치(feature/real-sensor-test-camera-base)는 feature/phone-camera를 기반으로 실제 VL53L8CX 거리센서 테스트를 추가한다. 스마트폰 카메라와 YOLOX-Nano 객체 인식 흐름은 유지하고, 거리 입력은 XIAO ESP32-S3 Sense에서 USB CDC로 받는다.
+
+### 현재까지 구현한 내용
+
+- Android USB 거리 수신 계층이 기존 `left_mm` / `right_mm` JSON을 계속 지원한다.
+- 64존 원본을 보내는 `left_zones_mm` / `right_zones_mm` 배열 형식을 추가했다.
+- 배열이 들어오면 앱은 각 배열의 가장 가까운 유효 거리(mm)를 좌우 대표 거리로 사용한다.
+- JSON 줄은 USB read 경계와 관계없이 조립하며, 잘못된 값과 유효 범위를 벗어난 값은 무시한다.
+- XIAO ESP32-S3 Sense용 VL53L8CX 단일 센서 테스트 펌웨어를 추가했다.
+- 현재 펌웨어는 센서 A만 활성화하고 센서 B의 LP(D3)를 LOW로 유지한다.
+- XIAO 배선은 SDA=D4, SCL=D5, 센서 A LP=D2, 센서 B LP=D3이다.
+- Serial Monitor에서 거리값을 4×4 격자로 확인하고 `r` 입력으로 8×8로 전환할 수 있다.
+
+펌웨어 파일은 [firmware/VL53L8CX_DistanceGrid_XIAO](firmware/VL53L8CX_DistanceGrid_XIAO/)에 있다. Arduino IDE에서 `XIAO_ESP32S3`, USB CDC On Boot 활성화, 포트 선택 후 업로드한다. Serial Monitor 속도는 115200이다.
+
+### 현재 확인된 상태
+
+- XIAO ESP32-S3에서 VL53L8CX 단일 센서 초기화와 거리값 출력이 확인됐다.
+- 4×4 거리 격자 출력이 확인됐다.
+- 센서 A와 B를 같은 I²C 주소로 동시에 켜는 구성은 아직 사용하지 않는다.
+- 현재 펌웨어 출력은 사람이 읽는 거리 격자이며 Android 앱으로 보내는 JSON 송신은 다음 단계다.
+
+### 다음 단계
+
+1. 센서 B를 LP 순서 제어로 깨우고 I²C 주소를 변경한다.
+2. 두 센서의 64존 데이터를 동시에 읽는다.
+3. `left_zones_mm` / `right_zones_mm` JSON으로 USB CDC에 전송한다.
+4. Android 개발자 화면에서 실제 좌우 센서값을 확인한다.
+5. 센서값을 카메라 객체 인식, 위험도 판단, 공간음향 출력과 연결한다.
+
+실제 센서값, 위험도 판단, 자동 보행 안내는 아직 실기기 검증 전이다.
