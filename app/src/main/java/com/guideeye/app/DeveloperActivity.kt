@@ -19,7 +19,7 @@ class DeveloperActivity : Activity() {
     private val distances: DistanceSource = MockDistanceSource()
     private lateinit var speech: KoreanSpeechGuide
     private var mockEnabled = true
-    private var usbMode = false
+    private var usbMode = true
     private lateinit var usb: UsbDistanceController
     private lateinit var vision: ExternalVisionController
     private lateinit var phone: PhoneCameraController
@@ -46,14 +46,23 @@ class DeveloperActivity : Activity() {
             insets
         }
         findViewById<View>(R.id.root).requestApplyInsets()
-        usbMode = savedInstanceState?.getBoolean("usbMode", false) ?: false
+        usbMode = savedInstanceState?.getBoolean("usbMode", true) ?: true
         mockEnabled = savedInstanceState?.getBoolean("mockEnabled", true) ?: true
         vision = ExternalVisionController(this, { code ->
-            findViewById<TextView>(R.id.camera_status).setText(code)
+            if (usbMode && foreground) {
+                findViewById<TextView>(R.id.camera_status).setText(code)
+                if (code != R.string.external_vision_ready) {
+                    findViewById<DetectionPreview>(R.id.camera_preview).clear()
+                    findViewById<TextView>(R.id.video).setText(R.string.video_placeholder)
+                }
+            }
         }, { bitmap, detections, elapsed ->
-            findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections)
-            val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence*100).toInt()}%" }
-            findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed, objects)
+            if (usbMode && foreground) {
+                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections)
+                val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence*100).toInt()}%" }
+                findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed,
+                    objects.ifEmpty { getString(R.string.no_objects_detected) })
+            } else bitmap.recycle()
         })
         phone = PhoneCameraController(this, { code ->
             if (!usbMode) {
@@ -105,10 +114,14 @@ class DeveloperActivity : Activity() {
             lastSensorAt = android.os.SystemClock.elapsedRealtime()
             findViewById<TextView>(R.id.left_distance).text = left?.let { getString(R.string.usb_left,it/1000f) } ?: getString(R.string.usb_left_waiting)
             findViewById<TextView>(R.id.right_distance).text = right?.let { getString(R.string.usb_right,it/1000f) } ?: getString(R.string.usb_right_waiting)
+        }, { failed ->
+            findViewById<TextView>(R.id.sensor_status).setText(
+                if (failed) R.string.tof_device_error else R.string.usb_sensor_status)
         })
         findViewById<Button>(R.id.connect_usb).setOnClickListener {
             usbMode = true
             phone.stop()
+            vision.stop()
             findViewById<DetectionPreview>(R.id.camera_preview).clear()
             updateMode()
             usb.connect()
@@ -150,7 +163,7 @@ class DeveloperActivity : Activity() {
         foreground = true
         usb.start()
         updateMode()
-        if (!usbMode) startPhoneCamera()
+        if (usbMode) usb.connect() else startPhoneCamera()
     }
     private fun startPhoneCamera() {
         if (!foreground || usbMode) return

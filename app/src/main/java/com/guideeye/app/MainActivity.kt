@@ -11,7 +11,7 @@ import android.widget.TextView
 import androidx.core.view.ViewCompat
 import com.guideeye.app.accessibility.ButtonTouchFeedback
 import com.guideeye.app.speech.KoreanSpeechGuide
-import com.guideeye.app.vision.PhoneCameraController
+import com.guideeye.app.vision.ExternalVisionController
 import com.guideeye.app.vision.YoloXDetector
 
 /** User entry screen: no scrolling, Mock values, or USB debugging controls. */
@@ -22,9 +22,9 @@ class MainActivity : Activity() {
     private var voiceUnavailable = false
     private var introAnnounced = false
     private var paused = false
-    private lateinit var vision: PhoneCameraController
+    private lateinit var vision: ExternalVisionController
     private var usbState = R.string.usb_idle
-    private var cameraStatus = R.string.phone_waiting
+    private var cameraStatus = R.string.external_disconnected
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +45,7 @@ class MainActivity : Activity() {
             insets
         }
         findViewById<View>(R.id.root).requestApplyInsets()
-        vision = PhoneCameraController(this, ::updateExternalStatus)
+        vision = ExternalVisionController(this, ::updateExternalStatus)
         speech = KoreanSpeechGuide(this) { status, available ->
             ready = available
             voiceUnavailable = !available
@@ -61,12 +61,12 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.listen_status).setOnClickListener {
             val message = when {
                 paused -> getString(R.string.central_object_paused)
-                usbState == R.string.phone_error -> getString(R.string.phone_error)
+                usbState == R.string.external_camera_error -> getString(R.string.external_camera_error)
                 !vision.isConnected -> {
-                    startPhoneCamera()
-                    getString(R.string.phone_permission)
+                    if (usbState != R.string.usb_permission && usbState != R.string.usb_opening) vision.connect()
+                    getString(R.string.external_connect_message)
                 }
-                !vision.hasFreshFrame() -> getString(R.string.phone_waiting)
+                !vision.hasFreshFrame() -> getString(R.string.external_wait_message)
                 else -> vision.central()?.let { getString(R.string.central_object_result, YoloXDetector.labels[it.classId]) }
                     ?: getString(R.string.central_object_uncertain)
             }
@@ -76,7 +76,7 @@ class MainActivity : Activity() {
             paused = !paused
             // Stop speech already playing/queued; explicit button feedback remains available when paused.
             speech.stop()
-            if (paused) vision.stop() else { startPhoneCamera() }
+            if (paused) vision.stop() else { vision.start(); vision.connect() }
             updatePauseUi()
             speech.speak(getString(if (paused) R.string.operation_paused_message else R.string.operation_resumed_message))
         }
@@ -88,22 +88,6 @@ class MainActivity : Activity() {
         }
         listOf(R.id.listen_status, R.id.listen_help, R.id.listen_howto, R.id.open_developer).forEach {
             ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
-        }
-    }
-
-    private fun startPhoneCamera() {
-        vision.start()
-        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            updateExternalStatus(R.string.phone_permission)
-            requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 100)
-        } else vision.connect()
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && foreground && !paused) {
-            if (grantResults.firstOrNull() == android.content.pm.PackageManager.PERMISSION_GRANTED) startPhoneCamera()
-            else updateExternalStatus(R.string.phone_permission)
         }
     }
 
@@ -162,7 +146,7 @@ class MainActivity : Activity() {
         outState.putBoolean("introAnnounced", introAnnounced)
         super.onSaveInstanceState(outState)
     }
-    override fun onStart() { super.onStart(); foreground = true; if (!paused) { startPhoneCamera() }; announceIntro() }
+    override fun onStart() { super.onStart(); foreground = true; if (!paused) { vision.start(); vision.connect() }; announceIntro() }
     override fun onStop() { foreground = false; vision.stop(); speech.stop(); super.onStop() }
     override fun onDestroy() { vision.close(); speech.close(); super.onDestroy() }
 }
