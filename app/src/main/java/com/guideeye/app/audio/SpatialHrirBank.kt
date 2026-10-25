@@ -22,7 +22,7 @@ class SpatialHrirBank(bytes: ByteArray) {
             Filter(az,el,ears)
         }
         // Common bound across every direction/ear: |convolution| <= |source|max * sum(|HRIR|).
-        val bound=filters.maxOf { it.ears.maxOf { ear -> ear.sumOf { abs(it).toDouble() } } } * source.maxOf { abs(it) }
+        val bound=filters.maxOf { it.ears.maxOf { ear -> ear.sumOf { abs(it).toDouble() } } }
         require(bound.isFinite() && bound>0)
         scale=(.6 * 32767 / bound).toFloat()
     }
@@ -34,9 +34,9 @@ class SpatialHrirBank(bytes: ByteArray) {
             sin(el)*sin(fe)+cos(el)*cos(fe)*cos(az-fa)
         }
     }
-    fun render(index: Int): ShortArray {
+    fun render(index: Int, durationMs: Int = 60): ShortArray {
         val ears=filters[index].ears
-        val result=HrtfRenderer.convolve(source,ears[0],ears[1])
+        val result=HrtfRenderer.convolve(if(durationMs==60) source else HrtfRenderer.noise(44100,durationMs),ears[0],ears[1])
         return ShortArray(result.size) { (result[it]*scale).toInt().coerceIn(-32767,32767).toShort() }
     }
 }

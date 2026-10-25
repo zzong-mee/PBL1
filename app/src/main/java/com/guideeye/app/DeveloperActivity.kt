@@ -36,6 +36,7 @@ class DeveloperActivity : Activity() {
     private lateinit var phone: PhoneCameraController
     private var foreground = false
     private var lastSensorAt = 0L
+    private lateinit var radar: RadarScanController
     private lateinit var spatial: TofSpatialController
     private val spatialSelector=TofTargetSelector()
     private var gridFrame: TofGridFrame?=null
@@ -59,7 +60,7 @@ class DeveloperActivity : Activity() {
         findViewById<Button>(R.id.toggle_distance_tone).setOnClickListener {
             when {
                 distanceTone.enabled -> distanceTone.stop()
-                foreground && usbMode -> { spatial.stop(); hrtf.stop(); distanceTone.start() }
+                foreground && usbMode -> { radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.start() }
                 else -> findViewById<TextView>(R.id.distance_tone_status).setText(R.string.distance_tone_usb_only)
             }
         }
@@ -81,11 +82,11 @@ class DeveloperActivity : Activity() {
         }
         hrtfDirections.forEach { (id, direction) ->
             findViewById<Button>(id).setOnClickListener {
-                if (foreground) { spatial.stop(); distanceTone.stop(); hrtf.play(direction.first) }
+                if (foreground) { radar.stop(); spatial.stop(); distanceTone.stop(); hrtf.play(direction.first) }
             }
         }
         findViewById<Button>(R.id.hrtf_circle).setOnClickListener {
-            if (foreground) { spatial.stop(); distanceTone.stop(); hrtf.play(0,true) }
+            if (foreground) { radar.stop(); spatial.stop(); distanceTone.stop(); hrtf.play(0,true) }
         }
         findViewById<Button>(R.id.hrtf_stop).setOnClickListener { hrtf.stop() }
         findViewById<SeekBar>(R.id.hrtf_distance).setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -103,13 +104,34 @@ class DeveloperActivity : Activity() {
             findViewById<Button>(R.id.tof_spatial_toggle).setText(
                 if(spatial.enabled) R.string.tof_spatial_disable else R.string.tof_spatial_enable)
         }
+        radar=RadarScanController(this) { code,selected,played ->
+            findViewById<TextView>(R.id.radar_status).text=if(code==R.string.radar_active)
+                getString(code,selected,played) else getString(code)
+            findViewById<Button>(R.id.radar_toggle).setText(if(radar.enabled) R.string.radar_disable else R.string.radar_enable)
+        }
+        findViewById<Spinner>(R.id.radar_limit).apply {
+            adapter=ArrayAdapter.createFromResource(this@DeveloperActivity,R.array.radar_limits,android.R.layout.simple_spinner_dropdown_item)
+            setSelection(1)
+            onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long){radar.setLimit(listOf(1,3,5,16)[position])}
+                override fun onNothingSelected(parent:AdapterView<*>?){}
+            }
+        }
+        findViewById<Button>(R.id.radar_toggle).setOnClickListener {
+            when {
+                radar.enabled -> radar.stop()
+                !foreground || !usbMode -> findViewById<TextView>(R.id.radar_status).setText(R.string.distance_tone_usb_only)
+                !findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked -> findViewById<TextView>(R.id.radar_status).setText(R.string.tof_calibration_required)
+                else -> { spatial.stop(); hrtf.stop(); distanceTone.stop(); radar.start(); refreshGrid() }
+            }
+        }
         listOf(R.id.tof_rotation_a,R.id.tof_rotation_b).forEach { id ->
             findViewById<Spinner>(id).apply {
                 adapter=ArrayAdapter.createFromResource(this@DeveloperActivity,R.array.tof_rotations,android.R.layout.simple_spinner_dropdown_item)
                 onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(parent:AdapterView<*>?, view:View?, position:Int, itemId:Long) {
                         findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
-                        spatial.stop(); spatialSelector.reset(); refreshGrid()
+                        radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
                     }
                     override fun onNothingSelected(parent:AdapterView<*>?) {}
                 }
@@ -118,18 +140,18 @@ class DeveloperActivity : Activity() {
         listOf(R.id.tof_mirror_a,R.id.tof_mirror_b).forEach { id ->
             findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ ->
                 findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
-                spatial.stop(); spatialSelector.reset(); refreshGrid()
+                radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
             }
         }
         findViewById<CheckBox>(R.id.tof_mount_confirm).setOnCheckedChangeListener { _, confirmed ->
-            if(!confirmed) { spatial.stop(); spatialSelector.reset() }
+            if(!confirmed) { radar.stop(); spatial.stop(); spatialSelector.reset() }
         }
         findViewById<Button>(R.id.tof_spatial_toggle).setOnClickListener {
             when {
                 spatial.enabled -> spatial.stop()
                 !foreground || !usbMode -> findViewById<TextView>(R.id.tof_spatial_status).setText(R.string.distance_tone_usb_only)
                 !findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked -> findViewById<TextView>(R.id.tof_spatial_status).setText(R.string.tof_calibration_required)
-                else -> { hrtf.stop(); distanceTone.stop(); spatialSelector.reset(); spatial.start(); refreshGrid() }
+                else -> { radar.stop(); hrtf.stop(); distanceTone.stop(); spatialSelector.reset(); spatial.start(); refreshGrid() }
             }
         }
         listOf(R.id.title, R.id.heading_connection, R.id.heading_distance,
@@ -252,7 +274,7 @@ class DeveloperActivity : Activity() {
             testButton.isEnabled = ready
         }
         testButton.setOnClickListener {
-            spatial.stop(); hrtf.stop(); distanceTone.stop()
+            radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop()
             val message = getString(R.string.speech_message)
             if (speech.speak(message)) {
                 findViewById<TextView>(R.id.recent_speech).text = getString(R.string.speech_recent, message)
@@ -264,7 +286,7 @@ class DeveloperActivity : Activity() {
         }
         listOf(R.id.back_to_user, R.id.use_phone_camera, R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.toggle_distance_tone, R.id.speech_test, R.id.hrtf_front, R.id.hrtf_back,
             R.id.hrtf_left, R.id.hrtf_right, R.id.hrtf_front_left, R.id.hrtf_front_right,
-            R.id.hrtf_back_left, R.id.hrtf_back_right, R.id.hrtf_circle, R.id.hrtf_stop, R.id.tof_spatial_toggle).forEach {
+            R.id.hrtf_back_left, R.id.hrtf_back_right, R.id.hrtf_circle, R.id.hrtf_stop, R.id.tof_spatial_toggle, R.id.radar_toggle).forEach {
             ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
         }
     }
@@ -310,7 +332,7 @@ class DeveloperActivity : Activity() {
         if(frame==null) {
             findViewById<TextView>(R.id.tof_grid).setText(R.string.tof_grid_waiting)
             findViewById<TextView>(R.id.tof_spatial_target).setText(R.string.distance_tone_no_target)
-            spatial.invalidate(); spatialSelector.reset(); return
+            radar.invalidate(); spatial.invalidate(); spatialSelector.reset(); return
         }
         val now=android.os.SystemClock.elapsedRealtime()
         val elapsed=now-frame.receivedAt
@@ -326,19 +348,20 @@ class DeveloperActivity : Activity() {
         }
         val a=mount(true); val b=mount(false)
         findViewById<TextView>(R.id.tof_grid).text=getString(R.string.tof_grid_values,format(frame.left,a),format(frame.right,b))
-        if(!findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked || !foreground || !usbMode || !spatial.enabled) {
-            spatial.invalidate(); return
+        if(!findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked || !foreground || !usbMode || (!spatial.enabled && !radar.enabled)) {
+            radar.invalidate(); spatial.invalidate(); return
         }
         val candidates=TofProjection.project(frame.left,a,elapsed).map { SpatialTarget("A",it,frame.receivedAt+1000-frame.left.ageAtReceiptMs) } +
             TofProjection.project(frame.right,b,elapsed).map { SpatialTarget("B",it,frame.receivedAt+1000-frame.right.ageAtReceiptMs) }
-        val chosen=spatialSelector.select(candidates)
+        if(radar.enabled)radar.offer(candidates)
+        val chosen=if(spatial.enabled)spatialSelector.select(candidates) else null
         spatial.offer(chosen)
         findViewById<TextView>(R.id.tof_spatial_target).text=chosen?.let {
             getString(R.string.tof_selected,it.sensor,it.point.zone,it.point.rangeMm/1000f,it.point.azimuthDegrees,it.point.elevationDegrees)
         } ?: getString(R.string.distance_tone_no_target)
     }
     private fun clearUsbDistances() {
-        gridFrame=null; spatial.invalidate(); spatialSelector.reset()
+        gridFrame=null; radar.invalidate(); spatial.invalidate(); spatialSelector.reset()
         findViewById<TextView>(R.id.tof_grid).setText(R.string.tof_grid_waiting)
         findViewById<TextView>(R.id.tof_spatial_target).setText(R.string.distance_tone_no_target)
         distanceTone.invalidate()
@@ -346,7 +369,7 @@ class DeveloperActivity : Activity() {
         findViewById<TextView>(R.id.right_distance).setText(R.string.usb_right_waiting)
     }
     private fun updateMode() {
-        spatial.stop(); spatialSelector.reset()
+        radar.stop(); spatial.stop(); spatialSelector.reset()
         distanceTone.stop()
         distances.stop()
         findViewById<TextView>(R.id.notice).setText(if (usbMode) R.string.usb_notice else R.string.mock_notice)
@@ -375,6 +398,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { foreground = false; window.decorView.removeCallbacks(gridFreshness); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
-    override fun onDestroy() { spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
+    override fun onStop() { foreground = false; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onDestroy() { radar.close(); spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }

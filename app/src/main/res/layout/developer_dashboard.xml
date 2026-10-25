@@ -64,6 +64,12 @@
             <Button android:id="@+id/tof_spatial_toggle" style="@style/DashboardButton" android:text="@string/tof_spatial_enable" />
             <TextView android:id="@+id/tof_spatial_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
             <TextView android:id="@+id/tof_spatial_target" style="@style/DashboardText" android:text="@string/distance_tone_no_target" />
+            <TextView style="@style/DashboardHeading" android:text="@string/radar_heading" />
+            <TextView style="@style/DashboardText" android:text="@string/radar_help" />
+            <TextView style="@style/DashboardText" android:text="@string/radar_limit_label" />
+            <Spinner android:id="@+id/radar_limit" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
+            <Button android:id="@+id/radar_toggle" style="@style/DashboardButton" android:text="@string/radar_enable" />
+            <TextView android:id="@+id/radar_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
         </LinearLayout>
 
         <LinearLayout style="@style/DashboardCard">

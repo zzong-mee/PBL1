@@ -31,9 +31,10 @@ class HrirBank private constructor(val rate: Int, val filters: Map<Int, Array<Fl
 }
 
 object HrtfRenderer {
-    fun noise(rate: Int): FloatArray {
+    fun noise(rate: Int, durationMs: Int = 60): FloatArray {
+        require(durationMs in 10..1000)
         val random = Random(0x5448495244L)
-        val size = rate * 60 / 1000
+        val size = rate * durationMs / 1000
         return FloatArray(size) { i ->
             val envelope = (.5 - .5 * cos(2 * PI * i / (size - 1))).toFloat()
             (random.nextFloat() * 2 - 1) * envelope
