@@ -1,5 +1,12 @@
 # Third Eye
 
+## 8×8 존별 방향 음향 (`feature/tof-grid-direction`)
+
+현재 앱 **0.10.0-grid · versionCode 17**. 두 센서의64존 원본을 보존해 선택한 존의 방위/고도를 계산하고
+710개 실측 HRTF 중 가까운 필터를 사용한다. 새 펌웨어 업로드와 실제 장착/격자 보정 확인이 필요하다.
+[배치·보정·선택 규칙·정확도와 검증 한계](docs/tof-grid-direction.md)를 먼저 확인한다.
+아래는 기반 버전 기록이다.
+
 ## HRTF 방향 테스트 (`feature/hrtf-test`)
 
 현재 앱 **0.9.1-hrtf · versionCode 16**. MIT KEMAR 실측 HRIR로 수평8방향 스테레오 소리를 렌더링한다.

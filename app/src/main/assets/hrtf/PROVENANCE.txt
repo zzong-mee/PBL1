@@ -14,3 +14,6 @@ No time alignment, per-ear scaling, or minimum-phase conversion was applied.
 Virtual distance in app scales repetition/gain only, not near-field HRTF or reverb.
 2768ac841213a7ae11d1ea7fd0f25a69b39216102dc5dd913ea6ba0f0dc57e28  /workspace/tooling/libmysofa/share/MIT_KEMAR_normal_pinna.sofa
 9bb02f00372cd666ffe2fb6741fd11c0562939f8aeda09d88bd88909c9468203  app/src/main/assets/hrtf/kemar-horizontal.bin
+aaa210afe761fc3e3bdf7503dabc847c6b53fcdcdb7371398197441d94f9674a  app/src/main/assets/hrtf/kemar-spatial.bin
+kemar-spatial.bin: all710 measured positions, 44100Hz, 512 full taps/ear, no time alignment.
+Extraction tools/extract_spatial_hrtf.py, same pinned SOFA source and attribution above.

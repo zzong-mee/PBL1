@@ -49,6 +49,24 @@
         </LinearLayout>
 
         <LinearLayout style="@style/DashboardCard">
+            <TextView style="@style/DashboardHeading" android:text="@string/tof_grid_heading" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_grid_help" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_a" />
+            <Spinner android:id="@+id/tof_rotation_a" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
+            <CheckBox android:id="@+id/tof_mirror_a" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_a" android:saveEnabled="false" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" />
+            <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
+            <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" />
+            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:id="@+id/tof_grid" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="12sp" android:textColor="@color/text_primary" android:text="@string/tof_grid_waiting" />
+            </HorizontalScrollView>
+            <CheckBox android:id="@+id/tof_mount_confirm" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp" android:text="@string/tof_mount_confirm" android:saveEnabled="false" />
+            <Button android:id="@+id/tof_spatial_toggle" style="@style/DashboardButton" android:text="@string/tof_spatial_enable" />
+            <TextView android:id="@+id/tof_spatial_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
+            <TextView android:id="@+id/tof_spatial_target" style="@style/DashboardText" android:text="@string/distance_tone_no_target" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DashboardCard">
             <TextView android:id="@+id/heading_hrtf" style="@style/DashboardHeading" android:text="@string/hrtf_heading" />
             <TextView style="@style/DashboardText" android:text="@string/hrtf_help" />
             <TextView android:id="@+id/hrtf_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />

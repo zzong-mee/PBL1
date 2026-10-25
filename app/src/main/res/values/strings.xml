@@ -135,4 +135,25 @@
     <string name="hrtf_circle">수평 360도 · 8방향 순서 재생</string>
     <string name="hrtf_stop">HRTF 정지</string>
     <string name="hrtf_attribution">MIT KEMAR 실측 HRTF · Bill Gardner / Keith Martin, MIT Media Laboratory (1994). 개인에 따라 앞뒤 구별이 다를 수 있습니다.</string>
+    <string name="tof_grid_heading">8×8 센서 방향 음향</string>
+    <string name="tof_grid_help">각 센서의 64칸을 보존합니다. 물체를 왼쪽·위쪽으로 움직일 때 격자의 반응도 같은 방향이 되도록 회전과 반전을 확인하세요. 보정 확인 전에는 방향음을 켜지 않습니다. 유효한 측정점 중 가까운 한 점을 선택하며 사물 종류나 위험도를 판단하지 않습니다.</string>
+    <string name="tof_rotation_a">A(왼쪽) 격자 회전</string>
+    <string name="tof_rotation_b">B(오른쪽) 격자 회전</string>
+    <string name="tof_mirror_a">A 격자 좌우 반전</string>
+    <string name="tof_mirror_b">B 격자 좌우 반전</string>
+    <string-array name="tof_rotations"><item>0도</item><item>90도</item><item>180도</item><item>270도</item></string-array>
+    <string name="tof_mount_confirm">A는 왼쪽 22.5도, B는 오른쪽 22.5도, 위아래 수평으로 장착했고 격자의 좌우·상하를 확인했습니다.</string>
+    <string name="tof_calibration_required">실제 장착각과 격자의 좌우·상하부터 확인하세요.</string>
+    <string name="tof_grid_waiting">64존 원본과 유효 상태가 있는 새 펌웨어 데이터 대기</string>
+    <string name="tof_grid_values">A 왼쪽 [mm]
+%1$s
+
+B 오른쪽 [mm]
+%2$s</string>
+    <string name="tof_spatial_enable">8×8 방향음 켜기</string>
+    <string name="tof_spatial_disable">8×8 방향음 끄기</string>
+    <string name="tof_spatial_ready">방향 필터 준비 완료 · 격자와 장착 확인 필요</string>
+    <string name="tof_spatial_waiting">유효한 8×8 측정점 대기 · 무음</string>
+    <string name="tof_spatial_active">선택한 측정점의 방향음 재생 중</string>
+    <string name="tof_selected">선택: 센서 %1$s · 존 %2$d · %3$.2fm · 방위 %4$.1f도 · 고도 %5$.1f도 (추정)</string>
 </resources>

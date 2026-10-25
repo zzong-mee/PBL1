@@ -22,7 +22,8 @@ class UsbDistanceController(
     private val reading: (DistanceReading) -> Unit,
     private val jpeg: (ByteArray, Long) -> Unit = { _, _ -> },
     private val sensor: (Int?, Int?) -> Unit = { _, _ -> },
-    private val sensorError: (Boolean) -> Unit = {}
+    private val sensorError: (Boolean) -> Unit = {},
+    private val grid: (TofGridFrame?) -> Unit = {}
 ) {
     private val manager = context.getSystemService(UsbManager::class.java)
     private val main = Handler(Looper.getMainLooper())
@@ -159,11 +160,13 @@ class UsbDistanceController(
                                 val left = mm("left_mm") ?: zoneMinimum("left_zones_mm")
                                 val right = mm("right_mm") ?: zoneMinimum("right_zones_mm")
                                 val tofFailed = json.optString("tof_error").isNotEmpty()
+                                val gridFrame=TofGridFrame.parse(json,SystemClock.elapsedRealtime())
                                 lastValid = SystemClock.elapsedRealtime()
                                 receivedValid = true
                                 emit(token) {
                                     status(R.string.usb_receiving)
                                     sensorError(tofFailed)
+                                    grid(gridFrame)
                                     sensor(left, right)
                                     if (left != null && right != null) reading(DistanceReading(left / 1000f, right / 1000f))
                                 }

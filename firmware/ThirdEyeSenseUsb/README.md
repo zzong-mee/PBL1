@@ -1,5 +1,9 @@
 # Sense 카메라 + 두 ToF 센서 → Android YOLOX
 
+> 이 브랜치는 8×8 원본 전송을 추가했다. 새 앱·장착 확인·격자 방향 보정은
+> [존별 방향 음향 안내](../../docs/tof-grid-direction.md)를 먼저 따른다.
+> 아래의0.8.0 앱 기록과 구분한다.
+
 ## 구현 범위
 
 `ThirdEyeSenseUsb.ino`는 XIAO ESP32-S3 Sense의 실제 카메라 JPEG와 두 VL53L8CX의 대표 거리를
@@ -61,7 +65,7 @@ USB CDC로 Android 앱에 보낸다. 스마트폰 안에서 번들 YOLOX-Nano / 
 - GEYE v1: magic 4바이트, 헤더14(버전/종류/길이/시퀀스/장치 millis), payload, CRC32 4바이트.
   다중 바이트 값은 little-endian. 종류1=거리 JSON, 2=JPEG, 3=카메라 상태 JSON.
 - QVGA 320×240 JPEG, quality 15, 버퍼1개. 프레임 요청 간격 목표200ms이며 실측 FPS 보장은 아니다.
-- 센서는 4×4·5Hz. 각 센서 유효 영역 최솟값을 left_mm/right_mm으로 약500ms마다 보낸다.
+- 센서는 8×8·5Hz. 각 센서 유효 영역 최솟값을 left_mm/right_mm으로 약500ms마다 보낸다.
   대표 거리는 중앙 물체까지의 거리라는 뜻이 아니며 카메라/센서 좌표 융합은 하지 않는다.
 - 센서 오류/유효 표적 없음/1초 이상 지난 값은 null. tof_error가 있으면 앱에 센서 오류를 표시한다.
 - 카메라 초기화/캡처 실패는 종류3으로 알린다. 센서의 감지 가능한 오류가 있어도 카메라 사용을 허용한다.

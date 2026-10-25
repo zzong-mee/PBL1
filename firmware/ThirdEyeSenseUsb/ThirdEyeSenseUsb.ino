@@ -6,6 +6,7 @@
 #include <vl53l8cx.h>
 #include "esp_camera.h"
 #include "GeyePacket.h"
+#include "TofGridJson.h"
 
 // Set false only to isolate the camera during diagnosis; distances then remain null.
 constexpr bool ENABLE_TOF = true;
@@ -28,7 +29,7 @@ VL53L8CX_ResultsData resultsA, resultsB;
 bool failed = false;
 char tofError[160] = "";
 bool freshA = false, freshB = false;
-constexpr uint8_t tofResolution = VL53L8CX_RESOLUTION_4X4;
+constexpr uint8_t tofResolution = VL53L8CX_RESOLUTION_8X8;
 uint32_t lastA = 0, lastB = 0, lastPrint = 0;
 
 bool ack(uint8_t address) {
@@ -162,7 +163,7 @@ int minimum(const VL53L8CX_ResultsData &result) {
   return nearest <= 4000 ? nearest : -1;
 }
 void sendDistances() {
-  char left[12] = "null", right[12] = "null", json[280];
+  char left[12] = "null", right[12] = "null", json[4096];
   // Never turn a missing/stale/error sample into a real distance.
   if (ENABLE_TOF && !failed && freshA && uint32_t(millis()-lastA) <= 1000) {
     const int value = minimum(resultsA);
@@ -172,9 +173,17 @@ void sendDistances() {
     const int value = minimum(resultsB);
     if (value > 0) snprintf(right, sizeof(right), "%d", value);
   }
-  // tofError contains only fixed step names, sensor names and integer status.
-  snprintf(json, sizeof(json), "{\"left_mm\":%s,\"right_mm\":%s,\"tof_error\":\"%s\"}", left, right, tofError);
-  jsonPacket(1, json);
+  const uint32_t now=millis();
+  const bool validA=ENABLE_TOF && !failed && freshA && uint32_t(now-lastA)<=1000;
+  const bool validB=ENABLE_TOF && !failed && freshB && uint32_t(now-lastB)<=1000;
+  TofGridJson writer(json,sizeof(json));
+  writer.append("{\"left_mm\":%s,\"right_mm\":%s,\"tof_error\":\"%s\",\"grid_size\":8,\"grid_order\":\"st_uld_raw\"",left,right,tofError);
+  writer.append(",\"left_age_ms\":%lu,\"right_age_ms\":%lu",(unsigned long)(now-lastA),(unsigned long)(now-lastB));
+  writer.grid("left",resultsA,validA,VL53L8CX_NB_TARGET_PER_ZONE);
+  writer.grid("right",resultsB,validB,VL53L8CX_NB_TARGET_PER_ZONE);
+  writer.append("}");
+  if (writer.ok()) jsonPacket(1,json);
+  else jsonPacket(3,"{\"tof\":\"grid_packet_too_large\"}");
 }
 void setup() {
   Serial.begin(115200);

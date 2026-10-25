@@ -6,6 +6,13 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.SeekBar
+import android.widget.CheckBox
+import android.widget.Spinner
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
+import com.guideeye.app.audio.*
+import com.guideeye.app.usb.TofGrid
+import com.guideeye.app.usb.TofGridFrame
 import com.guideeye.app.audio.HrtfTestController
 import com.guideeye.app.accessibility.ButtonTouchFeedback
 import com.guideeye.app.audio.DistanceToneController
@@ -29,6 +36,9 @@ class DeveloperActivity : Activity() {
     private lateinit var phone: PhoneCameraController
     private var foreground = false
     private var lastSensorAt = 0L
+    private lateinit var spatial: TofSpatialController
+    private val spatialSelector=TofTargetSelector()
+    private var gridFrame: TofGridFrame?=null
     private lateinit var hrtf: HrtfTestController
     private lateinit var distanceTone: DistanceToneController
 
@@ -49,7 +59,7 @@ class DeveloperActivity : Activity() {
         findViewById<Button>(R.id.toggle_distance_tone).setOnClickListener {
             when {
                 distanceTone.enabled -> distanceTone.stop()
-                foreground && usbMode -> { hrtf.stop(); distanceTone.start() }
+                foreground && usbMode -> { spatial.stop(); hrtf.stop(); distanceTone.start() }
                 else -> findViewById<TextView>(R.id.distance_tone_status).setText(R.string.distance_tone_usb_only)
             }
         }
@@ -71,11 +81,11 @@ class DeveloperActivity : Activity() {
         }
         hrtfDirections.forEach { (id, direction) ->
             findViewById<Button>(id).setOnClickListener {
-                if (foreground) { distanceTone.stop(); hrtf.play(direction.first) }
+                if (foreground) { spatial.stop(); distanceTone.stop(); hrtf.play(direction.first) }
             }
         }
         findViewById<Button>(R.id.hrtf_circle).setOnClickListener {
-            if (foreground) { distanceTone.stop(); hrtf.play(0,true) }
+            if (foreground) { spatial.stop(); distanceTone.stop(); hrtf.play(0,true) }
         }
         findViewById<Button>(R.id.hrtf_stop).setOnClickListener { hrtf.stop() }
         findViewById<SeekBar>(R.id.hrtf_distance).setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -87,6 +97,41 @@ class DeveloperActivity : Activity() {
             override fun onStartTrackingTouch(bar: SeekBar?) {}
             override fun onStopTrackingTouch(bar: SeekBar?) {}
         })
+        spatial=TofSpatialController(this) { code ->
+            findViewById<TextView>(R.id.tof_spatial_status).setText(code)
+            if(!spatial.enabled) findViewById<TextView>(R.id.tof_spatial_target).setText(R.string.distance_tone_no_target)
+            findViewById<Button>(R.id.tof_spatial_toggle).setText(
+                if(spatial.enabled) R.string.tof_spatial_disable else R.string.tof_spatial_enable)
+        }
+        listOf(R.id.tof_rotation_a,R.id.tof_rotation_b).forEach { id ->
+            findViewById<Spinner>(id).apply {
+                adapter=ArrayAdapter.createFromResource(this@DeveloperActivity,R.array.tof_rotations,android.R.layout.simple_spinner_dropdown_item)
+                onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(parent:AdapterView<*>?, view:View?, position:Int, itemId:Long) {
+                        findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
+                        spatial.stop(); spatialSelector.reset(); refreshGrid()
+                    }
+                    override fun onNothingSelected(parent:AdapterView<*>?) {}
+                }
+            }
+        }
+        listOf(R.id.tof_mirror_a,R.id.tof_mirror_b).forEach { id ->
+            findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ ->
+                findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
+                spatial.stop(); spatialSelector.reset(); refreshGrid()
+            }
+        }
+        findViewById<CheckBox>(R.id.tof_mount_confirm).setOnCheckedChangeListener { _, confirmed ->
+            if(!confirmed) { spatial.stop(); spatialSelector.reset() }
+        }
+        findViewById<Button>(R.id.tof_spatial_toggle).setOnClickListener {
+            when {
+                spatial.enabled -> spatial.stop()
+                !foreground || !usbMode -> findViewById<TextView>(R.id.tof_spatial_status).setText(R.string.distance_tone_usb_only)
+                !findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked -> findViewById<TextView>(R.id.tof_spatial_status).setText(R.string.tof_calibration_required)
+                else -> { hrtf.stop(); distanceTone.stop(); spatialSelector.reset(); spatial.start(); refreshGrid() }
+            }
+        }
         listOf(R.id.title, R.id.heading_connection, R.id.heading_distance,
             R.id.heading_voice, R.id.heading_camera, R.id.heading_hrtf).forEach {
             androidx.core.view.ViewCompat.setAccessibilityHeading(findViewById(it), true)
@@ -177,6 +222,9 @@ class DeveloperActivity : Activity() {
             if (failed) distanceTone.invalidate()
             findViewById<TextView>(R.id.sensor_status).setText(
                 if (failed) R.string.tof_device_error else R.string.usb_sensor_status)
+        }, { frame ->
+            gridFrame=frame
+            refreshGrid()
         })
         findViewById<Button>(R.id.connect_usb).setOnClickListener {
             usbMode = true
@@ -204,7 +252,7 @@ class DeveloperActivity : Activity() {
             testButton.isEnabled = ready
         }
         testButton.setOnClickListener {
-            hrtf.stop(); distanceTone.stop()
+            spatial.stop(); hrtf.stop(); distanceTone.stop()
             val message = getString(R.string.speech_message)
             if (speech.speak(message)) {
                 findViewById<TextView>(R.id.recent_speech).text = getString(R.string.speech_recent, message)
@@ -216,14 +264,24 @@ class DeveloperActivity : Activity() {
         }
         listOf(R.id.back_to_user, R.id.use_phone_camera, R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.toggle_distance_tone, R.id.speech_test, R.id.hrtf_front, R.id.hrtf_back,
             R.id.hrtf_left, R.id.hrtf_right, R.id.hrtf_front_left, R.id.hrtf_front_right,
-            R.id.hrtf_back_left, R.id.hrtf_back_right, R.id.hrtf_circle, R.id.hrtf_stop).forEach {
+            R.id.hrtf_back_left, R.id.hrtf_back_right, R.id.hrtf_circle, R.id.hrtf_stop, R.id.tof_spatial_toggle).forEach {
             ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
         }
     }
 
+    private val gridFreshness=object:Runnable {
+        override fun run() {
+            if(!foreground)return
+            if(gridFrame?.let { android.os.SystemClock.elapsedRealtime()-it.receivedAt>1000 }==true) {
+                gridFrame=null; refreshGrid()
+            } else if(gridFrame!=null) refreshGrid()
+            window.decorView.postDelayed(this,200)
+        }
+    }
     override fun onStart() {
         super.onStart()
         foreground = true
+        window.decorView.post(gridFreshness)
         usb.start()
         updateMode()
         if (usbMode) usb.connect() else startPhoneCamera()
@@ -243,12 +301,52 @@ class DeveloperActivity : Activity() {
             else findViewById<TextView>(R.id.camera_status).setText(R.string.phone_permission)
         }
     }
+    private fun mount(left:Boolean)=TofMount(if(left)22.5 else -22.5,0.0,45.0,45.0,
+        findViewById<Spinner>(if(left)R.id.tof_rotation_a else R.id.tof_rotation_b).selectedItemPosition.coerceAtLeast(0),
+        findViewById<CheckBox>(if(left)R.id.tof_mirror_a else R.id.tof_mirror_b).isChecked)
+
+    private fun refreshGrid() {
+        val frame=gridFrame
+        if(frame==null) {
+            findViewById<TextView>(R.id.tof_grid).setText(R.string.tof_grid_waiting)
+            findViewById<TextView>(R.id.tof_spatial_target).setText(R.string.distance_tone_no_target)
+            spatial.invalidate(); spatialSelector.reset(); return
+        }
+        val now=android.os.SystemClock.elapsedRealtime()
+        val elapsed=now-frame.receivedAt
+        fun format(grid:TofGrid,m:TofMount):String {
+            val cells=Array<String>(64){"   -"}
+            if(elapsed>=0 && grid.ageAtReceiptMs+elapsed<=1000) grid.mm.forEachIndexed { i,d ->
+                var r=i/8; var c=i%8
+                repeat(m.quarterTurns) { val old=r; r=c; c=7-old }
+                if(m.mirrorColumns)c=7-c
+                cells[r*8+c]=d?.let { "%4d".format(it) } ?: "   -"
+            }
+            return cells.toList().chunked(8).joinToString("\n"){it.joinToString(" ")}
+        }
+        val a=mount(true); val b=mount(false)
+        findViewById<TextView>(R.id.tof_grid).text=getString(R.string.tof_grid_values,format(frame.left,a),format(frame.right,b))
+        if(!findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked || !foreground || !usbMode || !spatial.enabled) {
+            spatial.invalidate(); return
+        }
+        val candidates=TofProjection.project(frame.left,a,elapsed).map { SpatialTarget("A",it,frame.receivedAt+1000-frame.left.ageAtReceiptMs) } +
+            TofProjection.project(frame.right,b,elapsed).map { SpatialTarget("B",it,frame.receivedAt+1000-frame.right.ageAtReceiptMs) }
+        val chosen=spatialSelector.select(candidates)
+        spatial.offer(chosen)
+        findViewById<TextView>(R.id.tof_spatial_target).text=chosen?.let {
+            getString(R.string.tof_selected,it.sensor,it.point.zone,it.point.rangeMm/1000f,it.point.azimuthDegrees,it.point.elevationDegrees)
+        } ?: getString(R.string.distance_tone_no_target)
+    }
     private fun clearUsbDistances() {
+        gridFrame=null; spatial.invalidate(); spatialSelector.reset()
+        findViewById<TextView>(R.id.tof_grid).setText(R.string.tof_grid_waiting)
+        findViewById<TextView>(R.id.tof_spatial_target).setText(R.string.distance_tone_no_target)
         distanceTone.invalidate()
         findViewById<TextView>(R.id.left_distance).setText(R.string.usb_left_waiting)
         findViewById<TextView>(R.id.right_distance).setText(R.string.usb_right_waiting)
     }
     private fun updateMode() {
+        spatial.stop(); spatialSelector.reset()
         distanceTone.stop()
         distances.stop()
         findViewById<TextView>(R.id.notice).setText(if (usbMode) R.string.usb_notice else R.string.mock_notice)
@@ -277,6 +375,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { foreground = false; hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
-    override fun onDestroy() { hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
+    override fun onStop() { foreground = false; window.decorView.removeCallbacks(gridFreshness); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onDestroy() { spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }
