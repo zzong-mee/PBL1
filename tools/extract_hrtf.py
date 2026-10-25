@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 source, destination = map(Path, sys.argv[1:])
 expected = '2768ac841213a7ae11d1ea7fd0f25a69b39216102dc5dd913ea6ba0f0dc57e28'
-assert hashlib.sha256(source.read_bytes()).hexdigest() == expected, 'Unexpected SOFA source' 
+assert hashlib.sha256(source.read_bytes()).hexdigest() == expected, 'Unexpected SOFA source'
 with h5py.File(source) as f:
     assert float(f['Data.SamplingRate'][0]) == 44100
     assert np.all(f['Data.Delay'][:] == 0), 'Do not drop nonzero SOFA delays'
