@@ -38,6 +38,11 @@
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/surface_border"
                 android:importantForAccessibility="no" />
             <TextView android:id="@+id/right_distance" style="@style/DashboardDistance" android:text="@string/right_waiting" />
+            <Button android:id="@+id/toggle_distance_tone" style="@style/DashboardButton"
+                android:text="@string/distance_tone_enable" />
+            <TextView android:id="@+id/distance_tone_status" style="@style/DashboardText"
+                android:text="@string/distance_tone_off" />
+            <TextView style="@style/DashboardText" android:text="@string/distance_tone_help" />
             <TextView android:id="@+id/risk" style="@style/DashboardText" android:text="@string/risk_pending" />
         </LinearLayout>
 

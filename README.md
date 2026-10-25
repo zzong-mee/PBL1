@@ -1,5 +1,11 @@
 # Third Eye
 
+## 거리 단음 실험 (`feature/distance-tone`)
+
+현재 앱은 **0.8.1-tone · versionCode 13**이다. 개발자 모드의 좌우 거리 구역에서
+실제 USB 센서 거리로 880Hz 단음을 켤 수 있다. 가까울수록 반복 간격이 짧고 상대 음량이 커진다.
+[사용법·음량/거리 규칙·검증 한계](docs/distance-tone.md)를 따른다.
+
 ## Sense 카메라와 YOLOX 통합 (`feature/sense-camera-yolox`)
 
 **현재 앱: 0.8.0-sense · versionCode 12.** 기본 입력은 Sense USB 카메라다.

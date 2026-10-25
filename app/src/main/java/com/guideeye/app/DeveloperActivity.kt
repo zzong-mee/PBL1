@@ -6,6 +6,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import com.guideeye.app.accessibility.ButtonTouchFeedback
+import com.guideeye.app.audio.DistanceToneController
 import com.guideeye.app.data.DistanceSource
 import com.guideeye.app.data.MockDistanceSource
 import com.guideeye.app.speech.KoreanSpeechGuide
@@ -25,10 +26,23 @@ class DeveloperActivity : Activity() {
     private lateinit var phone: PhoneCameraController
     private var foreground = false
     private var lastSensorAt = 0L
+    private lateinit var distanceTone: DistanceToneController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_developer)
+        distanceTone = DistanceToneController(this) { code ->
+            findViewById<TextView>(R.id.distance_tone_status).setText(code)
+            findViewById<Button>(R.id.toggle_distance_tone).setText(
+                if (distanceTone.enabled) R.string.distance_tone_disable else R.string.distance_tone_enable)
+        }
+        findViewById<Button>(R.id.toggle_distance_tone).setOnClickListener {
+            when {
+                distanceTone.enabled -> distanceTone.stop()
+                foreground && usbMode -> distanceTone.start()
+                else -> findViewById<TextView>(R.id.distance_tone_status).setText(R.string.distance_tone_usb_only)
+            }
+        }
         listOf(R.id.title, R.id.heading_connection, R.id.heading_distance,
             R.id.heading_voice, R.id.heading_camera).forEach {
             androidx.core.view.ViewCompat.setAccessibilityHeading(findViewById(it), true)
@@ -98,7 +112,7 @@ class DeveloperActivity : Activity() {
                     }
                 }
                 if (status != R.string.usb_receiving) {
-                    clearUsbDistances()
+                    if (status != R.string.external_camera_error) clearUsbDistances()
                     vision.stop()
                     findViewById<DetectionPreview>(R.id.camera_preview).clear()
                     findViewById<TextView>(R.id.camera_status).setText(status)
@@ -112,9 +126,11 @@ class DeveloperActivity : Activity() {
             }
         }, { bytes, received -> vision.acceptJpeg(bytes,received) }, { left,right ->
             lastSensorAt = android.os.SystemClock.elapsedRealtime()
+            if (foreground && usbMode) distanceTone.update(left, right)
             findViewById<TextView>(R.id.left_distance).text = left?.let { getString(R.string.usb_left,it/1000f) } ?: getString(R.string.usb_left_waiting)
             findViewById<TextView>(R.id.right_distance).text = right?.let { getString(R.string.usb_right,it/1000f) } ?: getString(R.string.usb_right_waiting)
         }, { failed ->
+            if (failed) distanceTone.invalidate()
             findViewById<TextView>(R.id.sensor_status).setText(
                 if (failed) R.string.tof_device_error else R.string.usb_sensor_status)
         })
@@ -153,7 +169,7 @@ class DeveloperActivity : Activity() {
             mockEnabled = !mockEnabled
             updateMock()
         }
-        listOf(R.id.back_to_user, R.id.use_phone_camera, R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.speech_test).forEach {
+        listOf(R.id.back_to_user, R.id.use_phone_camera, R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.toggle_distance_tone, R.id.speech_test).forEach {
             ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
         }
     }
@@ -181,10 +197,12 @@ class DeveloperActivity : Activity() {
         }
     }
     private fun clearUsbDistances() {
+        distanceTone.invalidate()
         findViewById<TextView>(R.id.left_distance).setText(R.string.usb_left_waiting)
         findViewById<TextView>(R.id.right_distance).setText(R.string.usb_right_waiting)
     }
     private fun updateMode() {
+        distanceTone.stop()
         distances.stop()
         findViewById<TextView>(R.id.notice).setText(if (usbMode) R.string.usb_notice else R.string.mock_notice)
         findViewById<TextView>(R.id.sensor_status).setText(if (usbMode) R.string.usb_sensor_status else R.string.sensor_status)
@@ -212,6 +230,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { foreground = false; phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
-    override fun onDestroy() { phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
+    override fun onStop() { foreground = false; distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onDestroy() { distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }

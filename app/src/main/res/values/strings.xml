@@ -100,4 +100,13 @@
     <string name="phone_preview_help">기본 입력은 Sense USB 카메라입니다. 노란 점은 중앙, 초록 상자는 탐지 결과입니다. 휴대폰 카메라 버튼은 비교 실험용 입력을 명시적으로 선택합니다.</string>
     <string name="no_objects_detected">확실한 탐지 없음</string>
     <string name="tof_device_error">거리 센서 오류 · 전원을 분리한 뒤 배선을 확인하세요. 카메라는 별도로 동작합니다.</string>
+    <string name="distance_tone_enable">거리 단음 테스트 켜기</string>
+    <string name="distance_tone_disable">거리 단음 테스트 끄기</string>
+    <string name="distance_tone_off">거리 단음: 꺼짐</string>
+    <string name="distance_tone_waiting">거리 단음: 유효한 4미터 이내 센서값 대기 · 현재 무음</string>
+    <string name="distance_tone_active">거리 단음: 가까울수록 빠르고 크게 재생 중</string>
+    <string name="distance_tone_focus_lost">거리 단음: 다른 오디오 사용으로 중지됨 · 다시 켜주세요.</string>
+    <string name="distance_tone_error">거리 단음: 오디오 재생 실패 · 다시 켜주세요.</string>
+    <string name="distance_tone_usb_only">실제 USB 센서 모드에서만 거리 단음을 켤 수 있습니다.</string>
+    <string name="distance_tone_help">좌우 중 가까운 유효 거리로 같은 높이의 짧은 소리를 냅니다. 20cm 이하는 약 0.18초, 4m는 약 1.2초 간격입니다. 방향은 표현하지 않습니다. 센서값이 없거나 1.5초 이상 지나면 무음입니다. 휴대폰 미디어 음량을 낮게 시작하세요. 충돌 위험이나 보행 안전을 판단하는 기능이 아닙니다.</string>
 </resources>
