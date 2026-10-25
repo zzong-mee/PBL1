@@ -1,6 +1,6 @@
 # HRTF 실측 필터 방향 테스트
 
-브랜치 `feature/hrtf-test`, 앱 **0.9.0-hrtf (versionCode 15)**.
+브랜치 `feature/hrtf-test`, 앱 **0.9.1-hrtf (versionCode 16)**.
 단순 좌우 볼륨 조절이 아니라 MIT KEMAR의 양 귀 HRIR과 광대역 소리의 FIR 컨볼루션을 사용한다.
 기존 카메라/센서/거리 단음은 유지하고 **개발자 모드 → HRTF 가상 방향 테스트**를 추가했다.
 
@@ -13,7 +13,7 @@
 
 ## 앱 사용법
 
-1. `downloads/ThirdEye-0.9.0-hrtf-debug.apk` 설치. 기존 Galaxy 보안 경고가 해소된다고 보장하지 않는다.
+1. `downloads/ThirdEye-0.9.1-hrtf-debug.apk` 설치. 기존 Galaxy 보안 경고가 해소된다고 보장하지 않는다.
 2. 스테레오 이어폰을 연결하고 휴대폰 미디어 음량을 낮게 설정한다. 방향 비교에는 유선 이어폰을 권한다.
 3. 휴대폰의 모노 오디오 및 Dolby/추가 공간음향 효과를 끄고 비교한다. 이중 공간화는 단서를 바꿀 수 있다.
 4. Third Eye → 개발자 모드에서 아래 **HRTF 가상 방향 테스트**까지 스크롤한다.
@@ -63,3 +63,15 @@ USB/센서/YOLO/인터넷 없이 HRTF 테스트를 사용할 수 있다. USB가 
 - FIR 임펄스 지연/채널 배치/꼬리 보존 검사, 실제8방향 출력의 구별·클리핑 없음·잘못된 입력 거부 검사.
 - APK 서명 검증 통과. WAV를 앱의 동일 렌더러에서 출력하고 스테레오/길이14.4초/클리핑 없음/귀간 에너지차 확인.
 - 클라우드에서 Android 기기 재생/사용자의 방향 지각은 확인하지 못했다. 빌드·수치 검증과 실청 검증을 구분한다.
+
+
+## 0.9.1 오디오 초기화 오류 수정
+
+0.9.0에서 거리 단음/HRTF 재생이 공통으로 실패할 수 있었다. MODE_STATIC AudioTrack은
+생성 직후 STATE_NO_STATIC_DATA가 정상이며, 데이터를 write한 뒤 STATE_INITIALIZED가 된다.
+기존 코드는 write 전에 STATE_INITIALIZED를 요구해 정상 객체를 실패로 처리했다.
+두 컨트롤러 모두 쓰기 전 NO_STATIC_DATA 또는 INITIALIZED를 허용하고, 전체 PCM 쓰기와
+쓰기 후 INITIALIZED를 확인하도록 수정했다. APK 자체에 HRIR이 포함되므로 WAV는 추가 설치물이 아니다.
+관련 Android 소스: https://github.com/aosp-mirror/platform_frameworks_base/blob/master/media/java/android/media/AudioTrack.java
+추가 오류가 발생하면 logcat 태그 ThirdEyeAudio에 예외를 남긴다. 빌드/JVM 검사는 native AudioTrack
+상태 전이와 실제 청취를 실행하지 않으므로 수정 APK의 실기기 재생 확인이 필요하다.

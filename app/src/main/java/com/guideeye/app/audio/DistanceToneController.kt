@@ -47,8 +47,10 @@ class DistanceToneController(context: Context, private val status: (Int) -> Unit
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT).build())
             .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(samples.size * 2).build()
         try {
-            check(audio.state == AudioTrack.STATE_INITIALIZED)
+            // MODE_STATIC starts in NO_STATIC_DATA; a successful write initializes it.
+            check(audio.state == AudioTrack.STATE_NO_STATIC_DATA || audio.state == AudioTrack.STATE_INITIALIZED)
             check(audio.write(samples, 0, samples.size) == samples.size)
+            check(audio.state == AudioTrack.STATE_INITIALIZED)
             return audio
         } catch (error: Exception) { audio.release(); throw error }
     }
@@ -63,7 +65,7 @@ class DistanceToneController(context: Context, private val status: (Int) -> Unit
             phase.reset()
             report(R.string.distance_tone_waiting)
             handler.post(tick)
-        } catch (_: Exception) { stop(R.string.distance_tone_error) }
+        } catch (error: Exception) { android.util.Log.e("ThirdEyeAudio", "Distance tone initialization failed", error); stop(R.string.distance_tone_error) }
     }
     fun update(leftMm: Int?, rightMm: Int?) {
         val now = SystemClock.elapsedRealtime()
@@ -99,7 +101,7 @@ class DistanceToneController(context: Context, private val status: (Int) -> Unit
                     val selection = output.side to output.measuredMm
                     if (selection != lastTarget) { lastTarget = selection; target(output) }
                     report(R.string.distance_tone_active)
-                } catch (_: Exception) { stop(R.string.distance_tone_error); return }
+                } catch (error: Exception) { android.util.Log.e("ThirdEyeAudio", "Distance tone playback failed", error); stop(R.string.distance_tone_error); return }
             }
             handler.postDelayed(this, 30)
         }

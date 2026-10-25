@@ -2,7 +2,7 @@
 
 ## HRTF 방향 테스트 (`feature/hrtf-test`)
 
-현재 앱 **0.9.0-hrtf · versionCode 15**. MIT KEMAR 실측 HRIR로 수평8방향 스테레오 소리를 렌더링한다.
+현재 앱 **0.9.1-hrtf · versionCode 16**. MIT KEMAR 실측 HRIR로 수평8방향 스테레오 소리를 렌더링한다.
 개발자 모드의 HRTF 가상 방향 테스트에서 센서 없이 비교할 수 있다.
 [사용법·데이터 출처·구현 범위](docs/hrtf-test.md), [8방향 WAV](downloads/ThirdEye-HRTF-8-directions.wav).
 HRTF의 개인별 방향 구별 성능은 실청 검증 전이며 센서 방향 연결/머리 추적은 아직 포함하지 않는다.

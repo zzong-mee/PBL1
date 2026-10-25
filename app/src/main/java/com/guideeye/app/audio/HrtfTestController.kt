@@ -56,8 +56,10 @@ class HrtfTestController(context: Context, private val status: (Int, Int?) -> Un
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT).build())
             .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(samples.size * 2).build()
         try {
-            check(audio.state == AudioTrack.STATE_INITIALIZED)
+            // MODE_STATIC starts in NO_STATIC_DATA; a successful write initializes it.
+            check(audio.state == AudioTrack.STATE_NO_STATIC_DATA || audio.state == AudioTrack.STATE_INITIALIZED)
             check(audio.write(samples,0,samples.size) == samples.size)
+            check(audio.state == AudioTrack.STATE_INITIALIZED)
             track = audio
         } catch (error: Exception) { audio.release(); throw error }
         angle = direction; phase.reset()
@@ -75,7 +77,7 @@ class HrtfTestController(context: Context, private val status: (Int, Int?) -> Un
             enabled = true; sweep = circle
             nextDirectionAt = SystemClock.elapsedRealtime() + 1800
             main.post(tick)
-        } catch (_: Exception) { stop(R.string.hrtf_error) }
+        } catch (error: Exception) { android.util.Log.e("ThirdEyeAudio", "HRTF playback failed", error); stop(R.string.hrtf_error) }
     }
     private val tick: Runnable = object : Runnable {
         override fun run() {
@@ -92,7 +94,7 @@ class HrtfTestController(context: Context, private val status: (Int, Int?) -> Un
                 if (phase.due(now,signal.intervalMs)) {
                     audio.stop(); check(audio.reloadStaticData() == AudioTrack.SUCCESS); audio.play()
                 }
-            } catch (_: Exception) { stop(R.string.hrtf_error); return }
+            } catch (error: Exception) { android.util.Log.e("ThirdEyeAudio", "HRTF playback failed", error); stop(R.string.hrtf_error); return }
             main.postDelayed(this,30)
         }
     }

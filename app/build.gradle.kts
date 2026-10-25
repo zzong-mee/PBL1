@@ -9,8 +9,8 @@ android {
         applicationId = "com.guideeye.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "0.9.0-hrtf"
+        versionCode = 16
+        versionName = "0.9.1-hrtf"
         // Galaxy A34 is ARM64; avoid shipping unused native runtimes.
         ndk { abiFilters += "arm64-v8a" }
     }
