@@ -1,5 +1,12 @@
 # Third Eye
 
+## 두 센서 실측 테스트 (`feature/dual-tof-sensors`)
+
+새 펌웨어 [ThirdEyeDualTof](firmware/ThirdEyeDualTof/)는 기존 Y선 배선을 유지하며 부팅 때
+A/B 주소를 분리해 두 거리 격자를 PC 시리얼 모니터에 출력한다. 기존 단일 센서 스케치는 보존한다.
+**새 펌웨어의 ESP32 전체 컴파일과 실물 검증은 아직 필요하며, Android용 JSON 송신은 포함하지 않는다.**
+설치·주소 표기·Windows 업로드·측정 절차와 검증 한계는 위 문서를 따른다.
+
 **현재 앱 버전: 0.7.2-phone** · versionCode: 11
 
 ## 스마트폰 카메라 테스트 브랜치
