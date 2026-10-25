@@ -145,11 +145,7 @@
     <string name="tof_mount_confirm">A는 왼쪽 22.5도, B는 오른쪽 22.5도, 위아래 수평으로 장착했고 격자의 좌우·상하를 확인했습니다.</string>
     <string name="tof_calibration_required">실제 장착각과 격자의 좌우·상하부터 확인하세요.</string>
     <string name="tof_grid_waiting">64존 원본과 유효 상태가 있는 새 펌웨어 데이터 대기</string>
-    <string name="tof_grid_values">A 왼쪽 [mm]
-%1$s
-
-B 오른쪽 [mm]
-%2$s</string>
+    <string name="tof_grid_values">A 왼쪽 (mm)\n%1$s\n\nB 오른쪽 (mm)\n%2$s</string>
     <string name="tof_spatial_enable">8×8 방향음 켜기</string>
     <string name="tof_spatial_disable">8×8 방향음 끄기</string>
     <string name="tof_spatial_ready">방향 필터 준비 완료 · 격자와 장착 확인 필요</string>
