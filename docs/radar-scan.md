@@ -69,6 +69,20 @@ HRTF는 선택한 존의 방위/고도에 가까운 MIT KEMAR 실측 필터이�
 
 ## 검증 결과
 
+### 0.11.1 개발자 화면 종료 수정
+
+격자 회전 Spinner의 `apply` 블록에서 한정하지 않은 `findViewById`가 Activity 대신 Spinner 내부를
+검색했다. 화면 진입 때 자동 발생하는 첫 선택 콜백에서 형제 뷰인 장착 확인 CheckBox를 찾지 못해
+`NullPointerException`으로 종료됐다. Activity를 명시해 확인란을 검색하도록 수정했다.
+Robolectric API 35의 실제 레이아웃/Activity 수명주기 테스트에서 수정 전 동일 예외를 재현했다.
+화면 진입·종료와 A/B 회전 변경 시 장착 확인 해제를 회귀 테스트에 추가했다.
+이 테스트는 JVM Android 프레임워크 시뮬레이션이며 Galaxy 실기기 또는 실제 오디오 재생 검증은 아니다.
+`downloads/ThirdEye-0.11.1-scan-debug.apk`로 기존 앱을 업데이트한다. 펌웨어 변경은 없다.
+수정 후 `assembleDebug testDebugUnitTest lintDebug` 성공, 테스트49개 모두 통과, Lint 오류0·기존 경고7,
+APK 서명 검증 통과. 실제 휴대폰에서의 화면 진입·오디오 동작은 사용자 확인이 필요하다.
+
+### 0.11.0 스캔 구현 당시
+
 Android `assembleDebug testDebugUnitTest lintDebug` 성공. 단위 테스트47개, 실패/오류/건너뜀0.
 Lint 오류0·기존 경고7. 새 테스트는 스캔 시간/각도,빈 구간 시간 유지,개수 제한,좌중우 우선·실제각도 간격,
 구간별 최근접 선택,최신값 재확인,만료/지연 구간 생략,짧은 실측 HRTF의 길이/스테레오/클리핑을 검증한다.

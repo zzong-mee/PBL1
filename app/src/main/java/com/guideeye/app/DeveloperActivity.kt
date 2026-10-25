@@ -130,7 +130,7 @@ class DeveloperActivity : Activity() {
                 adapter=ArrayAdapter.createFromResource(this@DeveloperActivity,R.array.tof_rotations,android.R.layout.simple_spinner_dropdown_item)
                 onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(parent:AdapterView<*>?, view:View?, position:Int, itemId:Long) {
-                        findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
+                        this@DeveloperActivity.findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
                         radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
                     }
                     override fun onNothingSelected(parent:AdapterView<*>?) {}
