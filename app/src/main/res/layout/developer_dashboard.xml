@@ -49,6 +49,34 @@
         </LinearLayout>
 
         <LinearLayout style="@style/DashboardCard">
+            <TextView android:id="@+id/heading_hrtf" style="@style/DashboardHeading" android:text="@string/hrtf_heading" />
+            <TextView style="@style/DashboardText" android:text="@string/hrtf_help" />
+            <TextView android:id="@+id/hrtf_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
+            <TextView android:id="@+id/hrtf_distance_label" style="@style/DashboardText" android:text="@string/hrtf_initial_distance" />
+            <SeekBar android:id="@+id/hrtf_distance" android:layout_width="match_parent" android:layout_height="64dp"
+                android:max="3800" android:progress="1800" android:saveEnabled="false" android:contentDescription="@string/hrtf_distance_description" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/hrtf_front" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_front" />
+                <Button android:id="@+id/hrtf_back" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_back" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/hrtf_left" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_left" />
+                <Button android:id="@+id/hrtf_right" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_right" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/hrtf_front_left" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_front_left" />
+                <Button android:id="@+id/hrtf_front_right" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_front_right" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/hrtf_back_left" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_back_left" />
+                <Button android:id="@+id/hrtf_back_right" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_back_right" />
+            </LinearLayout>
+            <Button android:id="@+id/hrtf_circle" style="@style/DashboardButton" android:text="@string/hrtf_circle" />
+            <Button android:id="@+id/hrtf_stop" style="@style/DashboardButton" android:text="@string/hrtf_stop" />
+            <TextView style="@style/DashboardText" android:text="@string/hrtf_attribution" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DashboardCard">
             <TextView android:id="@+id/heading_voice" style="@style/DashboardHeading" android:text="@string/section_voice" />
             <TextView style="@style/DashboardText" android:text="@string/touch_instructions" />
             <TextView android:id="@+id/tts_status" style="@style/DashboardText" android:text="@string/tts_initializing" />

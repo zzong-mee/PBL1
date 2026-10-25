@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import android.widget.SeekBar
+import com.guideeye.app.audio.HrtfTestController
 import com.guideeye.app.accessibility.ButtonTouchFeedback
 import com.guideeye.app.audio.DistanceToneController
 import com.guideeye.app.audio.DistanceToneState
@@ -27,6 +29,7 @@ class DeveloperActivity : Activity() {
     private lateinit var phone: PhoneCameraController
     private var foreground = false
     private var lastSensorAt = 0L
+    private lateinit var hrtf: HrtfTestController
     private lateinit var distanceTone: DistanceToneController
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,12 +49,46 @@ class DeveloperActivity : Activity() {
         findViewById<Button>(R.id.toggle_distance_tone).setOnClickListener {
             when {
                 distanceTone.enabled -> distanceTone.stop()
-                foreground && usbMode -> distanceTone.start()
+                foreground && usbMode -> { hrtf.stop(); distanceTone.start() }
                 else -> findViewById<TextView>(R.id.distance_tone_status).setText(R.string.distance_tone_usb_only)
             }
         }
+        val hrtfDirections = mapOf(
+            R.id.hrtf_front to (0 to R.string.hrtf_front),
+            R.id.hrtf_front_left to (45 to R.string.hrtf_front_left),
+            R.id.hrtf_left to (90 to R.string.hrtf_left),
+            R.id.hrtf_back_left to (135 to R.string.hrtf_back_left),
+            R.id.hrtf_back to (180 to R.string.hrtf_back),
+            R.id.hrtf_back_right to (225 to R.string.hrtf_back_right),
+            R.id.hrtf_right to (270 to R.string.hrtf_right),
+            R.id.hrtf_front_right to (315 to R.string.hrtf_front_right))
+        var virtualDistance = 2000
+        val directionLabels = hrtfDirections.values.toMap()
+        hrtf = HrtfTestController(this) { code, angle ->
+            findViewById<TextView>(R.id.hrtf_status).text = if (code == R.string.hrtf_playing && angle != null)
+                getString(code,getString(directionLabels.getValue(angle)),virtualDistance / 1000f)
+            else getString(code)
+        }
+        hrtfDirections.forEach { (id, direction) ->
+            findViewById<Button>(id).setOnClickListener {
+                if (foreground) { distanceTone.stop(); hrtf.play(direction.first) }
+            }
+        }
+        findViewById<Button>(R.id.hrtf_circle).setOnClickListener {
+            if (foreground) { distanceTone.stop(); hrtf.play(0,true) }
+        }
+        findViewById<Button>(R.id.hrtf_stop).setOnClickListener { hrtf.stop() }
+        findViewById<SeekBar>(R.id.hrtf_distance).setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
+                virtualDistance = progress + 200
+                findViewById<TextView>(R.id.hrtf_distance_label).text = getString(R.string.hrtf_distance,virtualDistance / 1000f)
+                hrtf.setDistance(virtualDistance)
+            }
+            override fun onStartTrackingTouch(bar: SeekBar?) {}
+            override fun onStopTrackingTouch(bar: SeekBar?) {}
+        })
         listOf(R.id.title, R.id.heading_connection, R.id.heading_distance,
-            R.id.heading_voice, R.id.heading_camera).forEach {
+            R.id.heading_voice, R.id.heading_camera, R.id.heading_hrtf).forEach {
             androidx.core.view.ViewCompat.setAccessibilityHeading(findViewById(it), true)
         }
         // Android 16 enforces edge-to-edge: keep controls clear of system bars and cutouts.
@@ -167,6 +204,7 @@ class DeveloperActivity : Activity() {
             testButton.isEnabled = ready
         }
         testButton.setOnClickListener {
+            hrtf.stop(); distanceTone.stop()
             val message = getString(R.string.speech_message)
             if (speech.speak(message)) {
                 findViewById<TextView>(R.id.recent_speech).text = getString(R.string.speech_recent, message)
@@ -176,7 +214,9 @@ class DeveloperActivity : Activity() {
             mockEnabled = !mockEnabled
             updateMock()
         }
-        listOf(R.id.back_to_user, R.id.use_phone_camera, R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.toggle_distance_tone, R.id.speech_test).forEach {
+        listOf(R.id.back_to_user, R.id.use_phone_camera, R.id.connect_usb, R.id.use_mock, R.id.toggle_mock, R.id.toggle_distance_tone, R.id.speech_test, R.id.hrtf_front, R.id.hrtf_back,
+            R.id.hrtf_left, R.id.hrtf_right, R.id.hrtf_front_left, R.id.hrtf_front_right,
+            R.id.hrtf_back_left, R.id.hrtf_back_right, R.id.hrtf_circle, R.id.hrtf_stop).forEach {
             ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
         }
     }
@@ -237,6 +277,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { foreground = false; distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
-    override fun onDestroy() { distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
+    override fun onStop() { foreground = false; hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onDestroy() { hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }

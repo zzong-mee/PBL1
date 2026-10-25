@@ -1,0 +1,16 @@
+MIT KEMAR normal pinna HRIR measurements. Copyright 1994 MIT Media Laboratory.
+Authors: Bill Gardner and Keith Martin, MIT Media Lab Machine Listening Group.
+Citation: Gardner, W. G. and Martin, K. D. (1995), HRTF measurements of a KEMAR,
+Journal of the Acoustical Society of America 97(6), 3907-3908.
+License: accompanying MIT_KEMAR_LICENSE.txt permits use with author citation.
+SOFA metadata contains a generic "No license provided" string; the explicit
+accompanying MIT_KEMAR_pinnae license identifies this dataset and states the terms above.
+Source mirror: https://github.com/hoene/libmysofa/blob/648eed03472e6720a1ea45d1a1f86c4efb569ff9/share/MIT_KEMAR_normal_pinna.sofa
+License mirror: https://github.com/hoene/libmysofa/blob/648eed03472e6720a1ea45d1a1f86c4efb569ff9/tests/LICENSE.MIT_KEMAR_pinnae
+Extraction: tools/extract_hrtf.py; 0-degree elevation, 1.4m measurement radius,
+8 azimuths in 45-degree steps, 44100Hz, full 512 taps per ear, Data.Delay=0.
+SOFA azimuth: 0 front, +90 left, 180 back, 270 right. Receiver0 left, receiver1 right.
+No time alignment, per-ear scaling, or minimum-phase conversion was applied.
+Virtual distance in app scales repetition/gain only, not near-field HRTF or reverb.
+2768ac841213a7ae11d1ea7fd0f25a69b39216102dc5dd913ea6ba0f0dc57e28  /workspace/tooling/libmysofa/share/MIT_KEMAR_normal_pinna.sofa
+9bb02f00372cd666ffe2fb6741fd11c0562939f8aeda09d88bd88909c9468203  app/src/main/assets/hrtf/kemar-horizontal.bin

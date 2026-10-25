@@ -113,4 +113,26 @@
     <string name="distance_tone_no_target">소리 대상: 없음</string>
     <string name="tone_left">왼쪽</string>
     <string name="tone_right">오른쪽</string>
+    <string name="hrtf_heading">HRTF 가상 방향 테스트</string>
+    <string name="hrtf_help">스테레오 이어폰을 사용하고 미디어 음량을 낮게 시작하세요. 휴대폰의 모노 오디오와 추가 공간음향 효과를 끄고 비교하세요. 버튼 방향에서 짧은 광대역 소리가 반복됩니다. 실제 장애물이나 센서값이 아닌 가상 음원이며, 머리를 돌려도 현실 공간에 고정되지 않습니다.</string>
+    <string name="hrtf_preparing">방향별 소리 준비 중</string>
+    <string name="hrtf_ready">준비 완료 · 방향 버튼을 눌러주세요</string>
+    <string name="hrtf_playing">가상 음원: %1$s · 가상 거리 %2$.2f미터</string>
+    <string name="hrtf_stopped">HRTF 테스트 정지</string>
+    <string name="hrtf_error">HRTF 소리 준비 또는 재생 실패</string>
+    <string name="hrtf_focus_lost">다른 오디오 사용으로 HRTF 정지 · 방향 버튼으로 다시 시작하세요.</string>
+    <string name="hrtf_initial_distance">가상 거리: 2.00미터</string>
+    <string name="hrtf_distance">가상 거리: %1$.2f미터</string>
+    <string name="hrtf_distance_description">가상 거리 조절. 20센티미터에서 4미터. 소리 간격과 음량이 바뀝니다.</string>
+    <string name="hrtf_front">앞</string>
+    <string name="hrtf_back">뒤</string>
+    <string name="hrtf_left">왼쪽</string>
+    <string name="hrtf_right">오른쪽</string>
+    <string name="hrtf_front_left">왼쪽 앞</string>
+    <string name="hrtf_front_right">오른쪽 앞</string>
+    <string name="hrtf_back_left">왼쪽 뒤</string>
+    <string name="hrtf_back_right">오른쪽 뒤</string>
+    <string name="hrtf_circle">수평 360도 · 8방향 순서 재생</string>
+    <string name="hrtf_stop">HRTF 정지</string>
+    <string name="hrtf_attribution">MIT KEMAR 실측 HRTF · Bill Gardner / Keith Martin, MIT Media Laboratory (1994). 개인에 따라 앞뒤 구별이 다를 수 있습니다.</string>
 </resources>
