@@ -7,6 +7,7 @@ import android.widget.Button
 import android.widget.TextView
 import com.guideeye.app.accessibility.ButtonTouchFeedback
 import com.guideeye.app.audio.DistanceToneController
+import com.guideeye.app.audio.DistanceToneState
 import com.guideeye.app.data.DistanceSource
 import com.guideeye.app.data.MockDistanceSource
 import com.guideeye.app.speech.KoreanSpeechGuide
@@ -31,11 +32,17 @@ class DeveloperActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_developer)
-        distanceTone = DistanceToneController(this) { code ->
+        distanceTone = DistanceToneController(this, { code ->
             findViewById<TextView>(R.id.distance_tone_status).setText(code)
             findViewById<Button>(R.id.toggle_distance_tone).setText(
                 if (distanceTone.enabled) R.string.distance_tone_disable else R.string.distance_tone_enable)
-        }
+        }, { output ->
+            findViewById<TextView>(R.id.distance_tone_target).text = output?.let {
+                getString(R.string.distance_tone_target,
+                    getString(if (it.side == DistanceToneState.Side.LEFT) R.string.tone_left else R.string.tone_right),
+                    it.measuredMm / 1000f)
+            } ?: getString(R.string.distance_tone_no_target)
+        })
         findViewById<Button>(R.id.toggle_distance_tone).setOnClickListener {
             when {
                 distanceTone.enabled -> distanceTone.stop()

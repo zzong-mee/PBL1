@@ -14,16 +14,16 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 /** Foreground developer experiment: 880Hz, 60ms mono beeps; never changes media volume. */
-class DistanceToneController(context: Context, private val status: (Int) -> Unit) {
+class DistanceToneController(context: Context, private val status: (Int) -> Unit,
+    private val target: (DistanceToneState.Output?) -> Unit = {}) {
     private val handler = Handler(Looper.getMainLooper())
     private val manager = context.getSystemService(AudioManager::class.java)
     private val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
     private var track: AudioTrack? = null
-    private var left: Int? = null
-    private var right: Int? = null
-    private var sampleAt: Long? = null
-    private var lastBeep: Long? = null
+    private val state = DistanceToneState()
+    private val phase = BeepPhase()
+    private var lastTarget: Pair<DistanceToneState.Side, Int>? = null
     private var lastStatus = 0
     var enabled = false
         private set
@@ -60,19 +60,21 @@ class DistanceToneController(context: Context, private val status: (Int) -> Unit
             }
             track = createTrack()
             enabled = true
-            lastBeep = null
+            phase.reset()
             report(R.string.distance_tone_waiting)
             handler.post(tick)
         } catch (_: Exception) { stop(R.string.distance_tone_error) }
     }
     fun update(leftMm: Int?, rightMm: Int?) {
-        left = leftMm; right = rightMm; sampleAt = SystemClock.elapsedRealtime()
-        // Stop the current beep immediately for an explicit null/out-of-range sample.
-        if (DistanceBeepPolicy.signal(left, right, 0) == null) silence()
+        val now = SystemClock.elapsedRealtime()
+        state.update(leftMm, rightMm, now)
+        if (state.output(now) == null) {
+            silence(); phase.reset(); lastTarget = null; target(null)
+        }
     }
     fun invalidate() {
-        left = null; right = null; sampleAt = null; lastBeep = null
-        silence()
+        state.reset(); phase.reset(); lastTarget = null
+        silence(); target(null)
         if (enabled) report(R.string.distance_tone_waiting)
     }
     private fun silence() { runCatching { track?.stop() } }
@@ -80,20 +82,22 @@ class DistanceToneController(context: Context, private val status: (Int) -> Unit
         override fun run() {
             if (!enabled) return
             val now = SystemClock.elapsedRealtime()
-            val signal = sampleAt?.let { DistanceBeepPolicy.signal(left, right, now - it) }
+            val output = state.output(now)
+            val signal = output?.signal
             if (signal == null) {
-                silence(); lastBeep = null
+                silence(); phase.reset(); lastTarget = null; target(null)
                 report(R.string.distance_tone_waiting)
             } else {
                 try {
-                    if (lastBeep == null || now - lastBeep!! >= signal.intervalMs) {
-                        val audio = track ?: error("No audio track")
+                    val audio = track ?: error("No audio track")
+                    check(audio.setVolume(signal.gain) == AudioTrack.SUCCESS)
+                    if (phase.due(now, signal.intervalMs)) {
                         audio.stop()
                         check(audio.reloadStaticData() == AudioTrack.SUCCESS)
-                        check(audio.setVolume(signal.gain) == AudioTrack.SUCCESS)
                         audio.play()
-                        lastBeep = now
                     }
+                    val selection = output.side to output.measuredMm
+                    if (selection != lastTarget) { lastTarget = selection; target(output) }
                     report(R.string.distance_tone_active)
                 } catch (_: Exception) { stop(R.string.distance_tone_error); return }
             }

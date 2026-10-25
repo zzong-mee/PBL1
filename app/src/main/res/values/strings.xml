@@ -108,5 +108,9 @@
     <string name="distance_tone_focus_lost">거리 단음: 다른 오디오 사용으로 중지됨 · 다시 켜주세요.</string>
     <string name="distance_tone_error">거리 단음: 오디오 재생 실패 · 다시 켜주세요.</string>
     <string name="distance_tone_usb_only">실제 USB 센서 모드에서만 거리 단음을 켤 수 있습니다.</string>
-    <string name="distance_tone_help">좌우 중 가까운 유효 거리로 같은 높이의 짧은 소리를 냅니다. 20cm 이하는 약 0.18초, 4m는 약 1.2초 간격입니다. 방향은 표현하지 않습니다. 센서값이 없거나 1.5초 이상 지나면 무음입니다. 휴대폰 미디어 음량을 낮게 시작하세요. 충돌 위험이나 보행 안전을 판단하는 기능이 아닙니다.</string>
+    <string name="distance_tone_help">선택한 센서 거리의 변화에 따라 간격과 음량이 연속적으로 바뀝니다. 가까우면 빠르고 크게 울립니다. 20cm와 4m는 변화 범위의 양 끝입니다. 비슷한 거리에서는 현재 방향을 유지하며 다른 방향이 15cm 넘게 가까워지면 바꿉니다. 방향은 표현하지 않습니다. 센서값이 없거나 1.5초 이상 지나면 무음입니다. 휴대폰 미디어 음량을 낮게 시작하세요. 충돌 위험이나 보행 안전을 판단하는 기능이 아닙니다.</string>
+    <string name="distance_tone_target">소리 대상: %1$s 센서 영역 · 측정 거리 %2$.2f미터</string>
+    <string name="distance_tone_no_target">소리 대상: 없음</string>
+    <string name="tone_left">왼쪽</string>
+    <string name="tone_right">오른쪽</string>
 </resources>

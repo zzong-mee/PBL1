@@ -42,6 +42,8 @@
                 android:text="@string/distance_tone_enable" />
             <TextView android:id="@+id/distance_tone_status" style="@style/DashboardText"
                 android:text="@string/distance_tone_off" />
+            <TextView android:id="@+id/distance_tone_target" style="@style/DashboardText"
+                android:text="@string/distance_tone_no_target" />
             <TextView style="@style/DashboardText" android:text="@string/distance_tone_help" />
             <TextView android:id="@+id/risk" style="@style/DashboardText" android:text="@string/risk_pending" />
         </LinearLayout>
