@@ -78,7 +78,8 @@ Robolectric API 35의 실제 레이아웃/Activity 수명주기 테스트에서 
 화면 진입·종료와 A/B 회전 변경 시 장착 확인 해제를 회귀 테스트에 추가했다.
 이 테스트는 JVM Android 프레임워크 시뮬레이션이며 Galaxy 실기기 또는 실제 오디오 재생 검증은 아니다.
 `downloads/ThirdEye-0.11.1-scan-debug.apk`로 기존 앱을 업데이트한다. 펌웨어 변경은 없다.
-수정 후 `assembleDebug testDebugUnitTest lintDebug` 성공, 테스트49개 모두 통과, Lint 오류0·기존 경고7,
+수정 후 `assembleDebug testDebugUnitTest lintDebug` 성공, 테스트49개 모두 통과, Lint 오류0·경고8
+(기존7개와 Robolectric 최신 버전 안내1개),
 APK 서명 검증 통과. 실제 휴대폰에서의 화면 진입·오디오 동작은 사용자 확인이 필요하다.
 
 ### 0.11.0 스캔 구현 당시
