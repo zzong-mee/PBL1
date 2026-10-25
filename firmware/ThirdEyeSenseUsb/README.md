@@ -102,3 +102,10 @@ ESP32 전체 컴파일과 실물 카메라/USB/Android native 추론은 별도 �
 - Python ONNX Runtime 1.20.1로 번들 모델 그래프/입출력 검사와 실제 샘플 이미지 추론 수행.
   공식 Ultralytics assets의 bus.jpg에서 버스(class 5, 약0.909)와 사람(class 0) 탐지.
   이 이미지는 저장소에 재배포하지 않았다. Android native 실행 또는 Sense 렌즈 영상 테스트는 아니다.
+
+### 카메라 헤더 이름 충돌 수정
+
+Windows ESP32 빌드에서 카메라 `sensor.h`의 전역 배열 `resolution[]`과 센서 변수 이름이
+충돌한 것을 확인해 센서 상수를 `tofResolution`으로 변경했다. 실제 Espressif `sensor.h`를
+호스트 검사에 포함하면 수정 전 오류가 재현되고 수정 후 Wire/Wire1 양쪽 분기가 통과한다.
+앞선 카메라 대역 헤더만의 검사는 이 충돌을 발견하지 못했다. ESP32 전체 빌드 검증은 여전히 별도다.

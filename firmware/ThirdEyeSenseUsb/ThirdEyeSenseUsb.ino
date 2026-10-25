@@ -28,7 +28,7 @@ VL53L8CX_ResultsData resultsA, resultsB;
 bool failed = false;
 char tofError[160] = "";
 bool freshA = false, freshB = false;
-uint8_t resolution = VL53L8CX_RESOLUTION_4X4;
+constexpr uint8_t tofResolution = VL53L8CX_RESOLUTION_4X4;
 uint32_t lastA = 0, lastB = 0, lastPrint = 0;
 
 bool ack(uint8_t address) {
@@ -70,7 +70,7 @@ bool prepare(VL53L8CX &sensor, const char *name, uint8_t target) {
   if (!check(name, "init", sensor.init())) return false;
   if (!check(name, "set_i2c_address", sensor.set_i2c_address(uint16_t(target) << 1))) return false;
   if (!ack(target) || (detected != target && ack(detected))) return fail(name, "address verification", -1);
-  if (!check(name, "set_resolution", sensor.set_resolution(resolution))) return false;
+  if (!check(name, "set_resolution", sensor.set_resolution(tofResolution))) return false;
   if (!check(name, "set_frequency 5Hz", sensor.set_ranging_frequency_hz(5))) return false;
   sensor.off();
   return true;
@@ -152,7 +152,7 @@ void setupCamera() {
 
 int minimum(const VL53L8CX_ResultsData &result) {
   int nearest = 4001;
-  for (uint8_t zone = 0; zone < resolution; ++zone) {
+  for (uint8_t zone = 0; zone < tofResolution; ++zone) {
     const uint8_t index = zone * VL53L8CX_NB_TARGET_PER_ZONE;
     const int distance = result.distance_mm[index];
     const uint8_t status = result.target_status[index];
