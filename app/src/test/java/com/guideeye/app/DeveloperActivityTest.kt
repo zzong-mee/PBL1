@@ -5,6 +5,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.Spinner
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -19,6 +20,7 @@ class DeveloperActivityTest {
         val controller = Robolectric.buildActivity(DeveloperActivity::class.java).setup()
         shadowOf(Looper.getMainLooper()).idle()
         val activity = controller.get()
+        assertEquals(android.media.AudioManager.STREAM_MUSIC, activity.volumeControlStream)
         assertFalse(activity.findViewById<Button>(R.id.radar_toggle).text.isEmpty())
         controller.pause().stop().destroy()
         shadowOf(Looper.getMainLooper()).idle()

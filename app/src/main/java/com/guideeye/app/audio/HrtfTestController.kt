@@ -17,7 +17,7 @@ class HrtfTestController(context: Context, private val status: (Int, Int?) -> Un
     private val main = Handler(Looper.getMainLooper())
     private val manager = context.getSystemService(AudioManager::class.java)
     private val worker = Executors.newSingleThreadExecutor()
-    private val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+    private val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
     private var buffers: Map<Int, ShortArray>? = null
     private var track: AudioTrack? = null

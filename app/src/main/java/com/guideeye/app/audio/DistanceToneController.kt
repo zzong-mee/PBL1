@@ -18,7 +18,8 @@ class DistanceToneController(context: Context, private val status: (Int) -> Unit
     private val target: (DistanceToneState.Output?) -> Unit = {}) {
     private val handler = Handler(Looper.getMainLooper())
     private val manager = context.getSystemService(AudioManager::class.java)
-    private val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+    // Media routing follows the selected headphones and media volume, not system-effect volume.
+    private val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
     private var track: AudioTrack? = null
     private val state = DistanceToneState()

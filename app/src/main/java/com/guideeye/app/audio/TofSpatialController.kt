@@ -13,7 +13,7 @@ class TofSpatialController(context: Context,private val status: (Int)->Unit) {
     private val main=Handler(Looper.getMainLooper())
     private val worker=Executors.newSingleThreadExecutor()
     private val manager=context.getSystemService(AudioManager::class.java)
-    private val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+    private val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
     private var bank: SpatialHrirBank?=null
     private var closed=false

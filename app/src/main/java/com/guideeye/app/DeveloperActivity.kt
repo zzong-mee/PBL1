@@ -45,6 +45,7 @@ class DeveloperActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        volumeControlStream = android.media.AudioManager.STREAM_MUSIC
         setContentView(R.layout.activity_developer)
         distanceTone = DistanceToneController(this, { code ->
             findViewById<TextView>(R.id.distance_tone_status).setText(code)
