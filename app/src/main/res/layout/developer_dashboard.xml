@@ -52,11 +52,11 @@
             <TextView style="@style/DashboardHeading" android:text="@string/tof_grid_heading" />
 
             <TextView style="@style/DashboardText" android:text="@string/tof_rotation_a" android:visibility="gone" />
-            <Spinner android:id="@+id/tof_rotation_a" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
-            <CheckBox android:id="@+id/tof_mirror_a" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_a" android:saveEnabled="false" />
+            <Spinner android:id="@+id/tof_rotation_a" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" android:visibility="gone" />
+            <CheckBox android:id="@+id/tof_mirror_a" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_a" android:saveEnabled="false" android:visibility="gone" />
             <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" android:visibility="gone" />
-            <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
-            <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" />
+            <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" android:visibility="gone" />
+            <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" android:visibility="gone" />
             <TextView android:id="@+id/tof_grid_waiting" style="@style/DashboardText"
                 android:text="@string/tof_grid_waiting" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -77,16 +77,16 @@
             </LinearLayout>
             <TextView style="@style/DashboardText"
                 android:text="거리 색상(mm): 빨강 1~100 · 주황 101~200 · 노랑 201~300 · 연두 301~500 · 초록 501~1000 · 파랑 1001~4000 · 회색 측정 불가" />
-            <CheckBox android:id="@+id/tof_mount_confirm" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp" android:text="@string/tof_mount_confirm" android:saveEnabled="false" />
-            <Button android:id="@+id/tof_spatial_toggle" style="@style/DashboardButton" android:text="@string/tof_spatial_enable" />
-            <TextView android:id="@+id/tof_spatial_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
-            <TextView android:id="@+id/tof_spatial_target" style="@style/DashboardText" android:text="@string/distance_tone_no_target" />
+            <CheckBox android:id="@+id/tof_mount_confirm" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp" android:text="@string/tof_mount_confirm" android:saveEnabled="false" android:visibility="gone" />
+            <Button android:id="@+id/tof_spatial_toggle" style="@style/DashboardButton" android:text="@string/tof_spatial_enable" android:visibility="gone" />
+            <TextView android:id="@+id/tof_spatial_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" android:visibility="gone" />
+            <TextView android:id="@+id/tof_spatial_target" style="@style/DashboardText" android:text="@string/distance_tone_no_target" android:visibility="gone" />
             <TextView style="@style/DashboardHeading" android:text="@string/radar_heading" android:visibility="gone" />
             <TextView style="@style/DashboardText" android:text="@string/radar_help" android:visibility="gone" />
             <TextView style="@style/DashboardText" android:text="@string/radar_limit_label" android:visibility="gone" />
-            <Spinner android:id="@+id/radar_limit" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
-            <Button android:id="@+id/radar_toggle" style="@style/DashboardButton" android:text="@string/radar_enable" />
-            <TextView android:id="@+id/radar_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
+            <Spinner android:id="@+id/radar_limit" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" android:visibility="gone" />
+            <Button android:id="@+id/radar_toggle" style="@style/DashboardButton" android:text="@string/radar_enable" android:visibility="gone" />
+            <TextView android:id="@+id/radar_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" android:visibility="gone" />
         </LinearLayout>
 
         <LinearLayout style="@style/DashboardCard" android:visibility="gone">
