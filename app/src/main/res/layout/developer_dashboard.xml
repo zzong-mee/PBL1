@@ -57,9 +57,22 @@
             <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" />
             <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
             <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" />
-            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:id="@+id/tof_grid" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="12sp" android:textColor="@color/text_primary" android:text="@string/tof_grid_waiting" />
+            <TextView android:id="@+id/tof_grid_waiting" style="@style/DashboardText"
+                android:text="@string/tof_grid_waiting" />
+            <TextView style="@style/DashboardText" android:text="A 왼쪽 센서 (mm)" />
+            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:fillViewport="false">
+                <GridLayout android:id="@+id/tof_grid_a" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:columnCount="8" android:rowCount="8" />
             </HorizontalScrollView>
+            <TextView style="@style/DashboardText" android:text="B 오른쪽 센서 (mm)" />
+            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:fillViewport="false">
+                <GridLayout android:id="@+id/tof_grid_b" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:columnCount="8" android:rowCount="8" />
+            </HorizontalScrollView>
+            <TextView style="@style/DashboardText"
+                android:text="거리 색상(mm): 빨강 1~100 · 주황 101~200 · 노랑 201~300 · 연두 301~500 · 초록 501~1000 · 파랑 1001~4000 · 회색 측정 불가" />
             <CheckBox android:id="@+id/tof_mount_confirm" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp" android:text="@string/tof_mount_confirm" android:saveEnabled="false" />
             <Button android:id="@+id/tof_spatial_toggle" style="@style/DashboardButton" android:text="@string/tof_spatial_enable" />
             <TextView android:id="@+id/tof_spatial_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
