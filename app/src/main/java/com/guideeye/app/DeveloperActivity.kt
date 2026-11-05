@@ -5,6 +5,10 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import android.widget.GridLayout
+import android.view.Gravity
+import android.graphics.Typeface
+import com.guideeye.app.usb.TofGridColorPalette
 import android.widget.SeekBar
 import android.widget.CheckBox
 import android.widget.Spinner
@@ -328,27 +332,74 @@ class DeveloperActivity : Activity() {
         findViewById<Spinner>(if(left)R.id.tof_rotation_a else R.id.tof_rotation_b).selectedItemPosition.coerceAtLeast(0),
         findViewById<CheckBox>(if(left)R.id.tof_mirror_a else R.id.tof_mirror_b).isChecked)
 
+    private fun orientedGrid(grid: TofGrid, m: TofMount, elapsed: Long): List<Int?> {
+        val cells = MutableList<Int?>(64) { null }
+        if (elapsed < 0 || grid.ageAtReceiptMs + elapsed > 1000) return cells
+        grid.mm.forEachIndexed { i, distance ->
+            var row = i / 8
+            var column = i % 8
+            repeat(m.quarterTurns) {
+                val oldRow = row
+                row = column
+                column = 7 - oldRow
+            }
+            if (m.mirrorColumns) column = 7 - column
+            cells[row * 8 + column] = distance
+        }
+        return cells
+    }
+
+    private fun updateGridHeatmap(gridId: Int, readings: List<Int?>?) {
+        val grid = findViewById<GridLayout>(gridId)
+        // Reuse the 64 views: no allocation on each sensor refresh.
+        if (grid.childCount == 0) {
+            val density = resources.displayMetrics.density
+            val cellWidth = (47 * density + 0.5f).toInt()
+            val cellHeight = (40 * density + 0.5f).toInt()
+            val margin = (1 * density + 0.5f).toInt()
+            repeat(64) {
+                val cell = TextView(this).apply {
+                    gravity = Gravity.CENTER
+                    textSize = 11f
+                    typeface = Typeface.MONOSPACE
+                    setPadding(0, 0, 0, 0)
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }
+                val params = GridLayout.LayoutParams(
+                    GridLayout.spec(it / 8),
+                    GridLayout.spec(it % 8)
+                ).apply {
+                    width = cellWidth
+                    height = cellHeight
+                    setMargins(margin, margin, margin, margin)
+                }
+                grid.addView(cell, params)
+            }
+        }
+        repeat(64) { index ->
+            val cell = grid.getChildAt(index) as TextView
+            val distance = readings?.getOrNull(index)
+            cell.text = distance?.toString() ?: "—"
+            cell.setBackgroundColor(TofGridColorPalette.backgroundColor(distance))
+            cell.setTextColor(TofGridColorPalette.textColor(distance))
+        }
+    }
+
     private fun refreshGrid() {
         val frame=gridFrame
         if(frame==null) {
-            findViewById<TextView>(R.id.tof_grid).setText(R.string.tof_grid_waiting)
+            updateGridHeatmap(R.id.tof_grid_a, null)
+            updateGridHeatmap(R.id.tof_grid_b, null)
+            findViewById<TextView>(R.id.tof_grid_waiting).visibility = View.VISIBLE
             findViewById<TextView>(R.id.tof_spatial_target).setText(R.string.distance_tone_no_target)
             radar.invalidate(); spatial.invalidate(); spatialSelector.reset(); return
         }
+        findViewById<TextView>(R.id.tof_grid_waiting).visibility = View.GONE
         val now=android.os.SystemClock.elapsedRealtime()
         val elapsed=now-frame.receivedAt
-        fun format(grid:TofGrid,m:TofMount):String {
-            val cells=Array<String>(64){"   -"}
-            if(elapsed>=0 && grid.ageAtReceiptMs+elapsed<=1000) grid.mm.forEachIndexed { i,d ->
-                var r=i/8; var c=i%8
-                repeat(m.quarterTurns) { val old=r; r=c; c=7-old }
-                if(m.mirrorColumns)c=7-c
-                cells[r*8+c]=d?.let { "%4d".format(it) } ?: "   -"
-            }
-            return cells.toList().chunked(8).joinToString("\n"){it.joinToString(" ")}
-        }
         val a=mount(true); val b=mount(false)
-        findViewById<TextView>(R.id.tof_grid).text=getString(R.string.tof_grid_values,format(frame.left,a),format(frame.right,b))
+        updateGridHeatmap(R.id.tof_grid_a, orientedGrid(frame.left,a,elapsed))
+        updateGridHeatmap(R.id.tof_grid_b, orientedGrid(frame.right,b,elapsed))
         if(!findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked || !foreground || !usbMode || (!spatial.enabled && !radar.enabled)) {
             radar.invalidate(); spatial.invalidate(); return
         }
@@ -363,7 +414,9 @@ class DeveloperActivity : Activity() {
     }
     private fun clearUsbDistances() {
         gridFrame=null; radar.invalidate(); spatial.invalidate(); spatialSelector.reset()
-        findViewById<TextView>(R.id.tof_grid).setText(R.string.tof_grid_waiting)
+        updateGridHeatmap(R.id.tof_grid_a, null)
+        updateGridHeatmap(R.id.tof_grid_b, null)
+        findViewById<TextView>(R.id.tof_grid_waiting).visibility = View.VISIBLE
         findViewById<TextView>(R.id.tof_spatial_target).setText(R.string.distance_tone_no_target)
         distanceTone.invalidate()
         findViewById<TextView>(R.id.left_distance).setText(R.string.usb_left_waiting)
