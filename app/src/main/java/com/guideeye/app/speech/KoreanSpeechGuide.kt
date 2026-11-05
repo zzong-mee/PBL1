@@ -46,6 +46,15 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
         return accepted
     }
 
+    /** Emergency channel preempts queued speech; reserved for fused alerts only. */
+    fun speakWarning(message: String): Boolean {
+        if (!ready || closed) return false
+        val accepted = engine?.speak(message, TextToSpeech.QUEUE_FLUSH, null, "obstacle-warning") ==
+            TextToSpeech.SUCCESS
+        if (!accepted) report(R.string.tts_error)
+        return accepted
+    }
+
     /** Each new contact replaces any previous label; it never executes the button action. */
     fun announceButton(name: String) {
         if (ready && !closed) {
