@@ -15,6 +15,7 @@ import com.guideeye.app.vision.ExternalVisionController
 import com.guideeye.app.vision.YoloXDetector
 import com.guideeye.app.fusion.ObstacleFusion
 import com.guideeye.app.fusion.ObstacleWarningGate
+import com.guideeye.app.fusion.TofApproachTracker
 import com.guideeye.app.usb.TofGridFrame
 import android.os.SystemClock
 
@@ -29,7 +30,8 @@ class MainActivity : Activity() {
     private lateinit var vision: ExternalVisionController
     private var usbState = R.string.usb_idle
     private var cameraStatus = R.string.external_disconnected
-    private var latestTof: TofGridFrame? = null
+    private val approachTracker = TofApproachTracker()
+    private var latestApproaches = emptyList<TofApproachTracker.Approach>()
     private val warningGate = ObstacleWarningGate()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,11 +54,11 @@ class MainActivity : Activity() {
         }
         findViewById<View>(R.id.root).requestApplyInsets()
         vision = ExternalVisionController(this, ::updateExternalStatus,
-            onGrid = { frame -> latestTof = frame },
+            onGrid = { frame -> latestApproaches = approachTracker.update(frame) },
             onDetections = { detections, received ->
                 if (foreground && !paused && ready) {
                     val now = SystemClock.elapsedRealtime()
-                    val warning = ObstacleFusion.evaluate(detections, latestTof, now, received)
+                    val warning = ObstacleFusion.evaluate(detections, latestApproaches, now, received)
                     warningGate.offer(warning, now)?.let { alert ->
                         val name = YoloXDetector.labels.getOrNull(alert.classId) ?: "장애물"
                         val direction = when (alert.sector) {
@@ -102,7 +104,8 @@ class MainActivity : Activity() {
             // Stop speech already playing/queued; explicit button feedback remains available when paused.
             speech.stop()
             warningGate.reset()
-            latestTof = null
+            approachTracker.reset()
+            latestApproaches = emptyList()
             if (paused) vision.stop() else { vision.start(); vision.connect() }
             updatePauseUi()
             speech.speak(getString(if (paused) R.string.operation_paused_message else R.string.operation_resumed_message))
