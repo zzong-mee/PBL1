@@ -334,7 +334,8 @@ class DeveloperActivity : Activity() {
 
     private fun orientedGrid(grid: TofGrid, m: TofMount, elapsed: Long): List<Int?> {
         val cells = MutableList<Int?>(64) { null }
-        if (elapsed < 0 || grid.ageAtReceiptMs + elapsed > 1000) return cells
+        if (elapsed < 0 || grid.ageAtReceiptMs !in 0..1000 ||
+            elapsed > 1000 - grid.ageAtReceiptMs) return cells
         grid.mm.forEachIndexed { i, distance ->
             var row = i / 8
             var column = i % 8
