@@ -3,10 +3,10 @@
     android:id="@+id/developer_scroll" android:layout_width="match_parent" android:layout_height="match_parent"
     android:fillViewport="true" android:clipToPadding="false">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="20dp">
+        android:orientation="vertical" android:padding="16dp">
         <TextView android:id="@+id/title" style="@style/DashboardHeading"
             android:text="@string/developer_mode" android:textSize="32sp" />
-        <TextView android:id="@+id/subtitle" style="@style/DashboardText" android:text="@string/subtitle" />
+        
 
         <LinearLayout style="@style/DashboardCard">
             <TextView android:id="@+id/heading_camera" style="@style/DashboardHeading" android:text="@string/section_camera" />
@@ -32,7 +32,7 @@
             <Button android:id="@+id/toggle_mock" style="@style/DashboardButton" android:text="@string/pause_mock" />
         </LinearLayout>
 
-        <LinearLayout style="@style/DashboardCard">
+        <LinearLayout style="@style/DashboardCard" android:visibility="gone">
             <TextView android:id="@+id/heading_distance" style="@style/DashboardHeading" android:text="@string/section_distance" />
             <TextView android:id="@+id/left_distance" style="@style/DashboardDistance" android:text="@string/left_waiting" />
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/surface_border"
@@ -50,11 +50,11 @@
 
         <LinearLayout style="@style/DashboardCard">
             <TextView style="@style/DashboardHeading" android:text="@string/tof_grid_heading" />
-            <TextView style="@style/DashboardText" android:text="@string/tof_grid_help" />
-            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_a" />
+
+            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_a" android:visibility="gone" />
             <Spinner android:id="@+id/tof_rotation_a" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
             <CheckBox android:id="@+id/tof_mirror_a" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_a" android:saveEnabled="false" />
-            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" android:visibility="gone" />
             <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
             <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" />
             <TextView android:id="@+id/tof_grid_waiting" style="@style/DashboardText"
@@ -81,15 +81,15 @@
             <Button android:id="@+id/tof_spatial_toggle" style="@style/DashboardButton" android:text="@string/tof_spatial_enable" />
             <TextView android:id="@+id/tof_spatial_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
             <TextView android:id="@+id/tof_spatial_target" style="@style/DashboardText" android:text="@string/distance_tone_no_target" />
-            <TextView style="@style/DashboardHeading" android:text="@string/radar_heading" />
-            <TextView style="@style/DashboardText" android:text="@string/radar_help" />
-            <TextView style="@style/DashboardText" android:text="@string/radar_limit_label" />
+            <TextView style="@style/DashboardHeading" android:text="@string/radar_heading" android:visibility="gone" />
+            <TextView style="@style/DashboardText" android:text="@string/radar_help" android:visibility="gone" />
+            <TextView style="@style/DashboardText" android:text="@string/radar_limit_label" android:visibility="gone" />
             <Spinner android:id="@+id/radar_limit" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
             <Button android:id="@+id/radar_toggle" style="@style/DashboardButton" android:text="@string/radar_enable" />
             <TextView android:id="@+id/radar_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
         </LinearLayout>
 
-        <LinearLayout style="@style/DashboardCard">
+        <LinearLayout style="@style/DashboardCard" android:visibility="gone">
             <TextView android:id="@+id/heading_hrtf" style="@style/DashboardHeading" android:text="@string/hrtf_heading" />
             <TextView style="@style/DashboardText" android:text="@string/hrtf_help" />
             <TextView android:id="@+id/hrtf_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
@@ -117,7 +117,7 @@
             <TextView style="@style/DashboardText" android:text="@string/hrtf_attribution" />
         </LinearLayout>
 
-        <LinearLayout style="@style/DashboardCard">
+        <LinearLayout style="@style/DashboardCard" android:visibility="gone">
             <TextView android:id="@+id/heading_voice" style="@style/DashboardHeading" android:text="@string/section_voice" />
             <TextView style="@style/DashboardText" android:text="@string/touch_instructions" />
             <TextView android:id="@+id/tts_status" style="@style/DashboardText" android:text="@string/tts_initializing" />
@@ -130,7 +130,7 @@
         <LinearLayout style="@style/DashboardCard">
             <TextView style="@style/DashboardHeading" android:text="전체 알고리즘 테스트" />
             <TextView style="@style/DashboardText"
-                android:text="실제 수신 및 처리 상태를 모니터링합니다. 구현되지 않은 단계는 표시하지 않습니다. 색상 외에 상태 문자도 함께 표시됩니다." />
+                android:text="현재 실행 중인 단계가 알고리즘 그림 위에 표시됩니다." />
             <Button android:id="@+id/full_test_toggle" style="@style/DashboardButton.Primary"
                 android:text="전체 테스트 시작" />
             <TextView android:id="@+id/full_test_status" style="@style/DashboardText"
