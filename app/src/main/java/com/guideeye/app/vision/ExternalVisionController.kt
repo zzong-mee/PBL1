@@ -8,12 +8,15 @@ import android.os.Looper
 import android.os.SystemClock
 import com.guideeye.app.R
 import com.guideeye.app.usb.UsbDistanceController
+import com.guideeye.app.usb.TofGridFrame
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** USB JPEG is an input adapter; detector accepts Bitmap so future frame sources can reuse it. */
 class ExternalVisionController(context: Context, private val status: (Int) -> Unit,
-    private val result: (Bitmap,List<Detection>,Long) -> Unit = { bitmap,_,_ -> bitmap.recycle() }) {
+    private val result: (Bitmap,List<Detection>,Long) -> Unit = { bitmap,_,_ -> bitmap.recycle() },
+    private val onGrid: (TofGridFrame?) -> Unit = {},
+    private val onDetections: (List<Detection>,Long) -> Unit = { _,_ -> }) {
     private val app = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
@@ -25,7 +28,7 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
     private val usb = UsbDistanceController(context, { code ->
         if (code != R.string.usb_receiving) { generation++; latest = null }
         status(code)
-    }, {}, { bytes, received -> acceptJpeg(bytes,received) })
+    }, {}, { bytes, received -> acceptJpeg(bytes,received) }, grid = onGrid)
 
     fun start() { usb.start() }
     fun connect() { generation++;latest=null;usb.connect() }
@@ -70,6 +73,7 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
                 main.post {
                     if(!closed && token==generation) {
                         latest=received to detections
+                        onDetections(detections, received)
                         status(R.string.external_vision_ready)
                         result(frame,detections,elapsed)
                     } else frame.recycle()
