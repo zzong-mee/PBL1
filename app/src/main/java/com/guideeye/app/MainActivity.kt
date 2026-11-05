@@ -80,10 +80,13 @@ class MainActivity : Activity() {
             updatePauseUi()
             speech.speak(getString(if (paused) R.string.operation_paused_message else R.string.operation_resumed_message))
         }
+        findViewById<Button>(R.id.listen_howto).setOnClickListener {
+            speech.speak(getString(R.string.home_howto_message))
+        }
         findViewById<Button>(R.id.open_developer).setOnClickListener {
             startActivity(Intent(this, DeveloperActivity::class.java))
         }
-        listOf(R.id.listen_status, R.id.listen_help, R.id.open_developer).forEach {
+        listOf(R.id.listen_status, R.id.listen_help, R.id.listen_howto, R.id.open_developer).forEach {
             ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
         }
     }

@@ -35,6 +35,20 @@ class DistanceLineDecoder {
             require(d.isFinite() && d in 1.0..100000.0 && d % 1.0 == 0.0)
             return (d / 1000).toFloat()
         }
-        DistanceReading(millimeters("left_mm"), millimeters("right_mm"))
+        fun zoneMinimum(key: String): Float {
+            val values = json.getJSONArray(key)
+            require(values.length() > 0)
+            var minimum = 100000.0
+            for (i in 0 until values.length()) {
+                val n = values.get(i) as? Number ?: continue
+                val d = n.toDouble()
+                if (d.isFinite() && d in 1.0..100000.0 && d % 1.0 == 0.0) minimum = minOf(minimum, d)
+            }
+            require(minimum < 100000.0)
+            return (minimum / 1000).toFloat()
+        }
+        val left = if (json.has("left_mm")) millimeters("left_mm") else zoneMinimum("left_zones_mm")
+        val right = if (json.has("right_mm")) millimeters("right_mm") else zoneMinimum("right_zones_mm")
+        DistanceReading(left, right)
     } catch (_: Exception) { null }
 }

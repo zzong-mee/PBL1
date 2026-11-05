@@ -9,6 +9,18 @@
         <TextView android:id="@+id/subtitle" style="@style/DashboardText" android:text="@string/subtitle" />
 
         <LinearLayout style="@style/DashboardCard">
+            <TextView android:id="@+id/heading_camera" style="@style/DashboardHeading" android:text="@string/section_camera" />
+            <TextView android:id="@+id/camera_status" style="@style/DashboardText" android:text="@string/camera_status" />
+            <Button android:id="@+id/use_phone_camera" style="@style/DashboardButton" android:text="@string/phone_preview_start" />
+            <TextView style="@style/DashboardText" android:text="@string/phone_preview_help" />
+            <com.guideeye.app.vision.DetectionPreview android:id="@+id/camera_preview"
+                android:layout_width="match_parent" android:layout_height="260dp"
+                android:background="#142532" android:importantForAccessibility="no" />
+            <TextView android:id="@+id/video" style="@style/DashboardText" android:background="@drawable/bg_notice"
+                android:padding="20dp" android:gravity="center" android:text="@string/video_placeholder" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DashboardCard">
             <TextView android:id="@+id/heading_connection" style="@style/DashboardHeading" android:text="@string/section_connection" />
             <TextView android:id="@+id/notice" style="@style/DashboardText"
                 android:background="@drawable/bg_notice" android:padding="16dp"
@@ -26,7 +38,83 @@
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/surface_border"
                 android:importantForAccessibility="no" />
             <TextView android:id="@+id/right_distance" style="@style/DashboardDistance" android:text="@string/right_waiting" />
+            <Button android:id="@+id/toggle_distance_tone" style="@style/DashboardButton"
+                android:text="@string/distance_tone_enable" />
+            <TextView android:id="@+id/distance_tone_status" style="@style/DashboardText"
+                android:text="@string/distance_tone_off" />
+            <TextView android:id="@+id/distance_tone_target" style="@style/DashboardText"
+                android:text="@string/distance_tone_no_target" />
+            <TextView style="@style/DashboardText" android:text="@string/distance_tone_help" />
             <TextView android:id="@+id/risk" style="@style/DashboardText" android:text="@string/risk_pending" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DashboardCard">
+            <TextView style="@style/DashboardHeading" android:text="@string/tof_grid_heading" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_grid_help" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_a" />
+            <Spinner android:id="@+id/tof_rotation_a" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
+            <CheckBox android:id="@+id/tof_mirror_a" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_a" android:saveEnabled="false" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" />
+            <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
+            <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" />
+            <TextView android:id="@+id/tof_grid_waiting" style="@style/DashboardText"
+                android:text="@string/tof_grid_waiting" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:baselineAligned="false">
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:orientation="vertical"
+                    android:layout_marginEnd="4dp">
+                    <TextView style="@style/DashboardText" android:text="A 왼쪽 센서 (mm)" />
+                    <GridLayout android:id="@+id/tof_grid_a" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:columnCount="8" android:rowCount="8" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:orientation="vertical">
+                    <TextView style="@style/DashboardText" android:text="B 오른쪽 센서 (mm)" />
+                    <GridLayout android:id="@+id/tof_grid_b" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:columnCount="8" android:rowCount="8" />
+                </LinearLayout>
+            </LinearLayout>
+            <TextView style="@style/DashboardText"
+                android:text="거리 색상(mm): 빨강 1~100 · 주황 101~200 · 노랑 201~300 · 연두 301~500 · 초록 501~1000 · 파랑 1001~4000 · 회색 측정 불가" />
+            <CheckBox android:id="@+id/tof_mount_confirm" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp" android:text="@string/tof_mount_confirm" android:saveEnabled="false" />
+            <Button android:id="@+id/tof_spatial_toggle" style="@style/DashboardButton" android:text="@string/tof_spatial_enable" />
+            <TextView android:id="@+id/tof_spatial_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
+            <TextView android:id="@+id/tof_spatial_target" style="@style/DashboardText" android:text="@string/distance_tone_no_target" />
+            <TextView style="@style/DashboardHeading" android:text="@string/radar_heading" />
+            <TextView style="@style/DashboardText" android:text="@string/radar_help" />
+            <TextView style="@style/DashboardText" android:text="@string/radar_limit_label" />
+            <Spinner android:id="@+id/radar_limit" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
+            <Button android:id="@+id/radar_toggle" style="@style/DashboardButton" android:text="@string/radar_enable" />
+            <TextView android:id="@+id/radar_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DashboardCard">
+            <TextView android:id="@+id/heading_hrtf" style="@style/DashboardHeading" android:text="@string/hrtf_heading" />
+            <TextView style="@style/DashboardText" android:text="@string/hrtf_help" />
+            <TextView android:id="@+id/hrtf_status" style="@style/DashboardText" android:text="@string/hrtf_preparing" />
+            <TextView android:id="@+id/hrtf_distance_label" style="@style/DashboardText" android:text="@string/hrtf_initial_distance" />
+            <SeekBar android:id="@+id/hrtf_distance" android:layout_width="match_parent" android:layout_height="64dp"
+                android:max="3800" android:progress="1800" android:saveEnabled="false" android:contentDescription="@string/hrtf_distance_description" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/hrtf_front" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_front" />
+                <Button android:id="@+id/hrtf_back" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_back" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/hrtf_left" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_left" />
+                <Button android:id="@+id/hrtf_right" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_right" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/hrtf_front_left" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_front_left" />
+                <Button android:id="@+id/hrtf_front_right" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_front_right" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/hrtf_back_left" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_back_left" />
+                <Button android:id="@+id/hrtf_back_right" style="@style/DashboardButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/hrtf_back_right" />
+            </LinearLayout>
+            <Button android:id="@+id/hrtf_circle" style="@style/DashboardButton" android:text="@string/hrtf_circle" />
+            <Button android:id="@+id/hrtf_stop" style="@style/DashboardButton" android:text="@string/hrtf_stop" />
+            <TextView style="@style/DashboardText" android:text="@string/hrtf_attribution" />
         </LinearLayout>
 
         <LinearLayout style="@style/DashboardCard">
@@ -40,13 +128,22 @@
         </LinearLayout>
 
         <LinearLayout style="@style/DashboardCard">
-            <TextView android:id="@+id/heading_camera" style="@style/DashboardHeading" android:text="@string/section_camera" />
-            <TextView android:id="@+id/camera_status" style="@style/DashboardText" android:text="@string/camera_status" />
-            <com.guideeye.app.vision.DetectionPreview android:id="@+id/camera_preview"
-                android:layout_width="match_parent" android:layout_height="260dp"
-                android:background="#142532" android:importantForAccessibility="no" />
-            <TextView android:id="@+id/video" style="@style/DashboardText" android:background="@drawable/bg_notice"
-                android:padding="20dp" android:gravity="center" android:text="@string/video_placeholder" />
+            <TextView style="@style/DashboardHeading" android:text="전체 알고리즘 테스트" />
+            <TextView style="@style/DashboardText"
+                android:text="실제 수신 및 처리 상태를 모니터링합니다. 구현되지 않은 단계는 표시하지 않습니다. 색상 외에 상태 문자도 함께 표시됩니다." />
+            <Button android:id="@+id/full_test_toggle" style="@style/DashboardButton.Primary"
+                android:text="전체 테스트 시작" />
+            <TextView android:id="@+id/full_test_status" style="@style/DashboardText"
+                android:text="테스트 대기" />
+            <LinearLayout android:id="@+id/full_test_blocks"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="gone">
+                <com.guideeye.app.AlgorithmFlowView android:id="@+id/algorithm_flow"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layerType="software" />
+            </LinearLayout>
         </LinearLayout>
+
+
     </LinearLayout>
 </ScrollView>

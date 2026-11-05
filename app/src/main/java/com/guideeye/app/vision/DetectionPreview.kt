@@ -20,6 +20,13 @@ class DetectionPreview(context: Context, attrs: AttributeSet? = null) : View(con
         paint.style=Paint.Style.FILL;target.set(left,top,left+w,top+h);canvas.drawBitmap(bitmap,null,target,paint)
         paint.style=Paint.Style.STROKE;paint.color=Color.YELLOW
         canvas.drawRect(left+.4f*w,top+.4f*h,left+.6f*w,top+.6f*h,paint)
+        // Contrast ring keeps the exact image centre visible on light and dark objects.
+        val radius = 5f * resources.displayMetrics.density
+        paint.style = Paint.Style.FILL
+        paint.color = Color.BLACK
+        canvas.drawCircle(left + w / 2, top + h / 2, radius + 2f * resources.displayMetrics.density, paint)
+        paint.color = Color.YELLOW
+        canvas.drawCircle(left + w / 2, top + h / 2, radius, paint)
         for(d in detections) {
             paint.color=Color.GREEN;paint.style=Paint.Style.STROKE
             canvas.drawRect(left+d.left*w,top+d.top*h,left+d.right*w,top+d.bottom*h,paint)

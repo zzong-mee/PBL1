@@ -21,7 +21,9 @@ class UsbDistanceController(
     private val status: (Int) -> Unit,
     private val reading: (DistanceReading) -> Unit,
     private val jpeg: (ByteArray, Long) -> Unit = { _, _ -> },
-    private val sensor: (Int?, Int?) -> Unit = { _, _ -> }
+    private val sensor: (Int?, Int?) -> Unit = { _, _ -> },
+    private val sensorError: (Boolean) -> Unit = {},
+    private val grid: (TofGridFrame?) -> Unit = {}
 ) {
     private val manager = context.getSystemService(UsbManager::class.java)
     private val main = Handler(Looper.getMainLooper())
@@ -134,6 +136,7 @@ class UsbDistanceController(
                 }
                 emit(token) { isConnected = true; status(R.string.usb_waiting) }
                 var lastValid = SystemClock.elapsedRealtime()
+                var receivedValid = false
                 val decoder = UsbStreamDecoder({ type, payload ->
                     when (type) {
                         1 -> {
@@ -144,10 +147,26 @@ class UsbDistanceController(
                                     val d = n.toDouble()
                                     return if (d.isFinite() && d in 1.0..100000.0 && d % 1 == 0.0) d.toInt() else null
                                 }
-                                val left = mm("left_mm"); val right = mm("right_mm")
+                                fun zoneMinimum(key: String): Int? {
+                                    val values = json.optJSONArray(key) ?: return null
+                                    var minimum = 100001
+                                    for (i in 0 until values.length()) {
+                                        val n = values.opt(i) as? Number ?: continue
+                                        val d = n.toDouble()
+                                        if (d.isFinite() && d in 1.0..100000.0 && d % 1 == 0.0) minimum = minOf(minimum, d.toInt())
+                                    }
+                                    return minimum.takeIf { it <= 100000 }
+                                }
+                                val left = mm("left_mm") ?: zoneMinimum("left_zones_mm")
+                                val right = mm("right_mm") ?: zoneMinimum("right_zones_mm")
+                                val tofFailed = json.optString("tof_error").isNotEmpty()
+                                val gridFrame=TofGridFrame.parse(json,SystemClock.elapsedRealtime())
                                 lastValid = SystemClock.elapsedRealtime()
+                                receivedValid = true
                                 emit(token) {
                                     status(R.string.usb_receiving)
+                                    sensorError(tofFailed)
+                                    grid(gridFrame)
                                     sensor(left, right)
                                     if (left != null && right != null) reading(DistanceReading(left / 1000f, right / 1000f))
                                 }
@@ -155,19 +174,22 @@ class UsbDistanceController(
                         }
                         3 -> runCatching {
                             val json = org.json.JSONObject(String(payload, Charsets.UTF_8))
-                            if (json.optString("camera") == "initialization_failed") {
+                            if (json.optString("camera") in setOf("initialization_failed", "capture_failed")) {
                                 lastValid = SystemClock.elapsedRealtime()
+                                receivedValid = true
                                 emit(token) { status(R.string.external_camera_error) }
                             }
                         }
                         2 -> if (payload.size >= 4 && payload[0] == 0xff.toByte() && payload[1] == 0xd8.toByte()) {
                             lastValid = SystemClock.elapsedRealtime()
+                            receivedValid = true
                             val received = lastValid
                             emit(token) { status(R.string.usb_receiving); jpeg(payload, received) }
                         }
                     }
                 }, { sample ->
                     lastValid = SystemClock.elapsedRealtime()
+                    receivedValid = true
                     emit(token) { status(R.string.usb_receiving); reading(sample); sensor((sample.leftMeters*1000).toInt(),(sample.rightMeters*1000).toInt()) }
                 })
                 val buffer = ByteArray(4096)
@@ -176,7 +198,7 @@ class UsbDistanceController(
                     if (size > 0) {
                         decoder.accept(buffer, size)
                     }
-                    if (SystemClock.elapsedRealtime() - lastValid > 4000) {
+                    if (SystemClock.elapsedRealtime() - lastValid > (if (receivedValid) 4000 else 15000)) {
                         emit(token) { disconnect(); status(R.string.usb_timeout) }
                         break
                     }

@@ -9,11 +9,13 @@ android {
         applicationId = "com.guideeye.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.6.0"
+        versionCode = 21
+        versionName = "0.11.3-scan"
         // Galaxy A34 is ARM64; avoid shipping unused native runtimes.
         ndk { abiFilters += "arm64-v8a" }
     }
+    sourceSets.getByName("test").resources.srcDir("src/main/assets/hrtf")
+    testOptions.unitTests.isIncludeAndroidResources = true
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -26,6 +28,7 @@ dependencies {
     // CPU inference on locally bundled YOLOX-Nano weights.
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.31.0")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.16.1")
     // Android supplies org.json at runtime; use its JVM implementation only for decoder tests.
     testImplementation("org.json:json:20260814")
 }

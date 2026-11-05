@@ -41,4 +41,26 @@ class UsbStreamDecoderTest {
         decoder.accept("{\"left_mm\":500,\"right_mm\":1200}\r\n".toByteArray()+frame(2,byteArrayOf(1,2)))
         assertEquals(1,distance);assertEquals(1,image)
     }
+    @Test fun `firmware encoder fixture survives every USB fragmentation boundary`() {
+        val hex = javaClass.getResourceAsStream("/sense-jpeg-packet.hex")!!.bufferedReader().use { it.readText().trim() }
+        val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        val expected = byteArrayOf(0xff.toByte(),0xd8.toByte(),71,69,89,69,123,125,0xff.toByte(),0xd9.toByte())
+        for (split in 0..bytes.size) {
+            var count = 0
+            val decoder = UsbStreamDecoder({ type,payload ->
+                assertEquals(2,type); assertArrayEquals(expected,payload); count++
+            }, { fail("JPEG contents must not become legacy readings") })
+            decoder.accept(bytes.copyOfRange(0,split))
+            decoder.accept(bytes.copyOfRange(split,bytes.size))
+            assertEquals(1,count)
+        }
+    }
+    @Test fun `camera errors distances and JPEG remain separate on one stream`() {
+        val packets = mutableListOf<Int>()
+        val decoder = UsbStreamDecoder({ type,_ -> packets.add(type) }, { fail("No legacy text expected") })
+        val distance = "{\"left_mm\":300,\"right_mm\":null}".toByteArray()
+        val error = "{\"camera\":\"initialization_failed\"}".toByteArray()
+        decoder.accept(frame(1,distance) + frame(3,error) + frame(2,byteArrayOf(0xff.toByte(),0xd8.toByte(),0xff.toByte(),0xd9.toByte())))
+        assertEquals(listOf(1,3,2),packets)
+    }
 }
