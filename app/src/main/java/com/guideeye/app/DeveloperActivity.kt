@@ -6,6 +6,9 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.GridLayout
+import android.widget.LinearLayout
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.graphics.Typeface
 import com.guideeye.app.usb.TofGridColorPalette
@@ -46,11 +49,18 @@ class DeveloperActivity : Activity() {
     private var gridFrame: TofGridFrame?=null
     private lateinit var hrtf: HrtfTestController
     private lateinit var distanceTone: DistanceToneController
+    private var fullTestEnabled = false
+    private var lastJpegAt = 0L
+    private var lastDetectionAt = 0L
+    private var lastSpeechAt = 0L
+    private var lastDetectionCount = 0
+    private val testBlocks = linkedMapOf<String, TextView>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         volumeControlStream = android.media.AudioManager.STREAM_MUSIC
         setContentView(R.layout.activity_developer)
+        setupFullTest()
         distanceTone = DistanceToneController(this, { code ->
             findViewById<TextView>(R.id.distance_tone_status).setText(code)
             findViewById<Button>(R.id.toggle_distance_tone).setText(
@@ -188,6 +198,8 @@ class DeveloperActivity : Activity() {
             }
         }, { bitmap, detections, elapsed ->
             if (usbMode && foreground) {
+                lastDetectionAt = android.os.SystemClock.elapsedRealtime()
+                lastDetectionCount = detections.size
                 findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections)
                 val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence*100).toInt()}%" }
                 findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed,
@@ -204,6 +216,8 @@ class DeveloperActivity : Activity() {
             }
         }, { bitmap, detections, elapsed ->
             if (!usbMode && foreground) {
+                lastDetectionAt = android.os.SystemClock.elapsedRealtime()
+                lastDetectionCount = detections.size
                 findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap, detections)
                 val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence * 100).toInt()}%" }
                 findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed, objects)
@@ -240,7 +254,10 @@ class DeveloperActivity : Activity() {
                 findViewById<TextView>(R.id.left_distance).text = getString(R.string.usb_left, reading.leftMeters)
                 findViewById<TextView>(R.id.right_distance).text = getString(R.string.usb_right, reading.rightMeters)
             }
-        }, { bytes, received -> vision.acceptJpeg(bytes,received) }, { left,right ->
+        }, { bytes, received ->
+            lastJpegAt = android.os.SystemClock.elapsedRealtime()
+            vision.acceptJpeg(bytes,received)
+        }, { left,right ->
             lastSensorAt = android.os.SystemClock.elapsedRealtime()
             if (foreground && usbMode) distanceTone.update(left, right)
             findViewById<TextView>(R.id.left_distance).text = left?.let { getString(R.string.usb_left,it/1000f) } ?: getString(R.string.usb_left_waiting)
@@ -282,6 +299,7 @@ class DeveloperActivity : Activity() {
             radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop()
             val message = getString(R.string.speech_message)
             if (speech.speak(message)) {
+                lastSpeechAt = android.os.SystemClock.elapsedRealtime()
                 findViewById<TextView>(R.id.recent_speech).text = getString(R.string.speech_recent, message)
             }
         }
@@ -296,12 +314,97 @@ class DeveloperActivity : Activity() {
         }
     }
 
+    private fun setupFullTest() {
+        val button = findViewById<Button>(R.id.full_test_toggle)
+        val panel = findViewById<LinearLayout>(R.id.full_test_blocks)
+        val stages = listOf(
+            "USB 연결·수신" to "USB 데이터 수신 루프",
+            "ToF 8×8 수신" to "좌·우 ToF 8×8 배열",
+            "거리 유효성 검사" to "거리 유효성 검사·군집화 중 유효성 검사",
+            "거리·방향 후보" to "거리·방향 위험 후보 (후보 투영만)",
+            "카메라 JPEG" to "카메라 JPEG 프레임",
+            "YOLO 탐지" to "YOLO 객체 탐지",
+            "레이더 스캔" to "레이더 스캔 음향 (개발자 기능)",
+            "공간 음향" to "ToF 공간 음향 (개발자 기능)",
+            "한국어 TTS" to "한국어 TTS / 오디오 출력 (TTS 테스트)"
+        )
+        stages.forEach { (key, label) ->
+            val view = TextView(this).apply {
+                textSize = 14f
+                setTextColor(Color.WHITE)
+                setPadding(dp(16), dp(14), dp(16), dp(14))
+                text = label
+                contentDescription = label + ", 대기"
+            }
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(8) }
+            panel.addView(view, params)
+            testBlocks[key] = view
+        }
+        button.setOnClickListener {
+            fullTestEnabled = !fullTestEnabled
+            panel.visibility = if (fullTestEnabled) View.VISIBLE else View.GONE
+            button.text = if (fullTestEnabled) "전체 테스트 종료" else "전체 테스트 시작"
+            findViewById<TextView>(R.id.full_test_status).text =
+                if (fullTestEnabled) "실시간 모니터링 중 · 미구현 단계 제외" else "테스트 대기"
+            if (fullTestEnabled) refreshFullTest()
+        }
+    }
+
+    private fun dp(value: Int) = (value * resources.displayMetrics.density + 0.5f).toInt()
+
+    private fun refreshFullTest() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val recent = { time: Long, duration: Long -> time > 0 && now >= time && now - time <= duration }
+        val frame = gridFrame
+        val elapsed = frame?.let { now - it.receivedAt } ?: -1L
+        val leftValid = frame != null && elapsed >= 0 &&
+            frame.left.ageAtReceiptMs in 0..1000 && elapsed <= 1000 - frame.left.ageAtReceiptMs
+        val rightValid = frame != null && elapsed >= 0 &&
+            frame.right.ageAtReceiptMs in 0..1000 && elapsed <= 1000 - frame.right.ageAtReceiptMs
+        val validGrid = leftValid || rightValid
+        val validPoints = if (validGrid && frame != null) {
+            (if (leftValid) frame.left.mm.count { it != null } else 0) +
+                (if (rightValid) frame.right.mm.count { it != null } else 0)
+        } else 0
+        fun mark(key: String, active: Boolean, detail: String) {
+            val view = testBlocks[key] ?: return
+            val label = view.text.toString().substringBefore("  ·  ")
+            val state = if (active) "동작" else "대기"
+            view.text = "$label  ·  $state ($detail)"
+            view.contentDescription = "$label, $state, $detail"
+            val background = GradientDrawable().apply {
+                cornerRadius = dp(12).toFloat()
+                setColor(if (active) Color.rgb(17, 76, 106) else Color.rgb(38, 49, 63))
+                setStroke(dp(if (active) 2 else 1),
+                    if (active) Color.rgb(91, 210, 255) else Color.rgb(83, 98, 112))
+            }
+            view.background = background
+            view.elevation = if (active) dp(9).toFloat() else 0f
+        }
+        mark("USB 연결·수신", usbMode && recent(lastSensorAt, 1500), "ToF 수신 기준")
+        mark("ToF 8×8 수신", validGrid, if (validGrid) "유효 프레임" else "새 프레임 없음")
+        mark("거리 유효성 검사", validGrid, "유효 거리 $validPoints/128")
+        val projectionReady = validGrid && validPoints > 0 &&
+            findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked &&
+            (radar.enabled || spatial.enabled)
+        mark("거리·방향 후보", projectionReady, "보정 확인 + 방향 기능 실행 시")
+        mark("카메라 JPEG", usbMode && recent(lastJpegAt, 1500), "USB JPEG 수신")
+        mark("YOLO 탐지", recent(lastDetectionAt, 1500),
+            "최근 탐지 결과 $lastDetectionCount 개")
+        mark("레이더 스캔", radar.enabled && projectionReady, "활성화 상태")
+        mark("공간 음향", spatial.enabled && projectionReady, "활성화 상태")
+        mark("한국어 TTS", recent(lastSpeechAt, 2500), "개발자 TTS 테스트 기준")
+    }
+
     private val gridFreshness=object:Runnable {
         override fun run() {
             if(!foreground)return
             if(gridFrame?.let { android.os.SystemClock.elapsedRealtime()-it.receivedAt>1000 }==true) {
                 gridFrame=null; refreshGrid()
             } else if(gridFrame!=null) refreshGrid()
+            if (fullTestEnabled) refreshFullTest()
             window.decorView.postDelayed(this,200)
         }
     }
