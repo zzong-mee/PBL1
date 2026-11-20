@@ -14,22 +14,26 @@ class TofApproachTracker(
     data class Approach(val sensor: Int, val zone: Int, val distanceMm: Int,
                         val closingMmPerSecond: Double, val observedAtMs: Long)
     private var previous: TofGridFrame? = null
+    private var older: TofGridFrame? = null
     private var previousCandidates = emptySet<Pair<Int,Int>>()
 
-    fun reset() { previous = null; previousCandidates = emptySet() }
+    fun reset() { previous = null; older = null; previousCandidates = emptySet() }
 
     fun update(frame: TofGridFrame?): List<Approach> {
         if (frame == null) { reset(); return emptyList() }
         val prior = previous
+        val oldHistory = older
+        older = prior
         previous = frame
         if (prior == null) return emptyList()
         val deltaMs = frame.receivedAt - prior.receivedAt
         if (deltaMs !in 80..1000) {
             previousCandidates = emptySet()
+            older = null
             return emptyList()
         }
         val candidates = mutableListOf<Approach>()
-        fun collect(sensor: Int, old: TofGrid, new: TofGrid) {
+        fun collect(sensor: Int, old: TofGrid, new: TofGrid, history: TofGrid?) {
             if (old.mm.size != 64 || new.mm.size != 64 ||
                 old.status.size != 64 || new.status.size != 64 ||
                 old.ageAtReceiptMs !in 0..1000 || new.ageAtReceiptMs !in 0..1000) return
@@ -41,14 +45,20 @@ class TofApproachTracker(
                     before !in 1..4000 || after !in 1..maxDistanceMm) continue
                 val actualDeltaMs = deltaMs + new.ageAtReceiptMs - old.ageAtReceiptMs
                 if (actualDeltaMs !in 80..1000) continue
+                // A one-frame depth spike must not become a closing-speed alert.
+                // The prior two valid readings must show consistent approach.
+                val earlier = history?.mm?.getOrNull(zone) ?: continue
+                if (history.status.getOrNull(zone) !in listOf(5, 6, 9) ||
+                    history.ageAtReceiptMs !in 0..1000 || earlier !in 1..4000 ||
+                    earlier <= before) continue
                 val speed = (before-after)*1000.0/actualDeltaMs
                 if (speed >= minClosingMmPerSecond) {
                     candidates.add(Approach(sensor,zone,after,speed,frame.receivedAt))
                 }
             }
         }
-        collect(0, prior.left, frame.left)
-        collect(1, prior.right, frame.right)
+        collect(0, prior.left, frame.left, oldHistory?.left)
+        collect(1, prior.right, frame.right, oldHistory?.right)
         // At least two adjacent cells must agree, and the region must persist
         // across two consecutive speed estimates (three sensor frames).
         val candidateKeys = candidates.map { it.sensor to it.zone }.toSet()
