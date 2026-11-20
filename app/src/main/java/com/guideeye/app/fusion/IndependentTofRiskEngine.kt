@@ -10,12 +10,14 @@ class IndependentTofRiskEngine(
     private val minClosingMmPerSecond: Double = 800.0,
     private val maxAgeMs: Long = 750
 ) {
+    enum class Level { CAUTION, DANGER }
     data class Risk(
         val sensor: Int,
         val distanceMm: Int,
         val closingMmPerSecond: Double,
         val ttcSeconds: Double,
-        val observedAtMs: Long
+        val observedAtMs: Long,
+        val level: Level = Level.CAUTION
     )
     fun evaluate(approaches: List<TofApproachTracker.Approach>, nowMs: Long): List<Risk> =
         approaches.asSequence().filter {
@@ -26,7 +28,11 @@ class IndependentTofRiskEngine(
                 nowMs >= it.observedAtMs && nowMs - it.observedAtMs <= maxAgeMs
         }.groupBy { it.sensor }.mapNotNull { (sensor, points) ->
             val nearest = points.minByOrNull { it.distanceMm } ?: return@mapNotNull null
-            Risk(sensor, nearest.distanceMm, nearest.closingMmPerSecond,
-                nearest.distanceMm / nearest.closingMmPerSecond, nearest.observedAtMs)
+            // Median speed across confirmed neighbouring cells suppresses one-cell spikes.
+            val speeds = points.map { it.closingMmPerSecond }.sorted()
+            val speed = speeds[speeds.size / 2]
+            val ttc = nearest.distanceMm / speed
+            val level = if (nearest.distanceMm <= 1500 && ttc <= 2.0) Level.DANGER else Level.CAUTION
+            Risk(sensor, nearest.distanceMm, speed, ttc, nearest.observedAtMs, level)
         }.sortedBy { it.ttcSeconds }.toList()
 }
