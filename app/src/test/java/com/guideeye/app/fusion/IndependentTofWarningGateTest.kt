@@ -12,6 +12,15 @@ class IndependentTofWarningGateTest {
         assertNull(gate.offer(listOf(risk(1100)), 6200))
         assertNotNull(gate.offer(listOf(risk(6200)), 6200))
     }
+    @Test fun dangerEscalatesBeforeCooldownExpires() {
+        val gate = IndependentTofWarningGate()
+        assertNotNull(gate.offer(listOf(risk(1000)), 1000))
+        val danger = risk(1200).copy(level = IndependentTofRiskEngine.Level.DANGER)
+        assertEquals(IndependentTofRiskEngine.Level.DANGER,
+            gate.offer(listOf(danger), 1200)?.level)
+        assertNull(gate.offer(listOf(danger.copy(observedAtMs = 1400)), 1400))
+    }
+
     @Test fun rejectsStaleAndResets() {
         val gate = IndependentTofWarningGate()
         assertNull(gate.offer(listOf(risk(1000)), 2000))
