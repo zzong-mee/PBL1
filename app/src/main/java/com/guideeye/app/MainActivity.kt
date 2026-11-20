@@ -59,10 +59,13 @@ class MainActivity : Activity() {
                 val now = SystemClock.elapsedRealtime()
                 if (foreground && !paused && ready && frame != null) {
                     val risks = tofRiskEngine.evaluate(approaches, now)
-                    tofWarningGate.offer(risks, now)?.let {
+                    tofWarningGate.offer(risks, now)?.let { risk ->
                         // Sensor mounting geometry is not calibrated: no left/right,
                         // camera object name or guaranteed collision-path claim.
-                        speech.speakWarning("주의. 가까워지는 물체가 감지되었습니다.")
+                        val message = if (risk.level == IndependentTofRiskEngine.Level.DANGER)
+                            "위험. 가까워지는 물체가 감지되었습니다."
+                        else "주의. 가까워지는 물체가 감지되었습니다."
+                        speech.speakWarning(message)
                     }
                 } else tofWarningGate.reset()
             })
