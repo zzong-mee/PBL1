@@ -191,6 +191,8 @@ class DeveloperActivity : Activity() {
         // Calibration is deliberately absent until measured on the physical glasses.
         // No synthetic ToF distances are shown as object-specific measurements.
         val rangeEstimator = com.guideeye.app.fusion.TrackedObjectRangeEstimator(null)
+        val visualTtc = com.guideeye.app.fusion.VisualExpansionTtcEstimator()
+        var visualEstimates = emptyList<com.guideeye.app.fusion.VisualExpansionTtcEstimator.Estimate>()
         var usbRanges = emptyList<com.guideeye.app.fusion.TrackedObjectRangeEstimator.ObjectRange>()
         var usbTracks = emptyList<com.guideeye.app.vision.TwoStageObjectTracker.TrackedDetection>()
         var phoneTracks = emptyList<com.guideeye.app.vision.TwoStageObjectTracker.TrackedDetection>()
@@ -210,7 +212,9 @@ class DeveloperActivity : Activity() {
                 val objects = detections.joinToString { d ->
                     val trackId = usbTracks.firstOrNull { it.detection == d }?.trackId
                     val range = usbRanges.firstOrNull { it.trackId == trackId }
-                    val detail = if (range == null) "거리 미보정" else {
+                    val visual = visualEstimates.firstOrNull { it.trackId == trackId }
+                    val visualLabel = visual?.let { " 영상 TTC %.1f초(추정)".format(it.ttcSeconds) } ?: ""
+                    val detail = if (range == null) "거리 미보정$visualLabel" else {
                         val ttc = range.ttcSeconds?.let { "%.1f초".format(it) } ?: "계산 불가"
                         "거리 %.2fm, 접근 %.2fm/s, TTC %s".format(
                             range.distanceMm / 1000.0, range.closingMmPerSecond / 1000.0, ttc)
@@ -222,6 +226,7 @@ class DeveloperActivity : Activity() {
             } else bitmap.recycle()
         }, onTracks = { tracks, received ->
             usbTracks = tracks
+            visualEstimates = visualTtc.update(tracks, received)
             usbRanges = rangeEstimator.update(
                 tracks, gridFrame, received, android.os.SystemClock.elapsedRealtime())
         })
@@ -247,6 +252,8 @@ class DeveloperActivity : Activity() {
             vision.stop()
             usbMode = false
             rangeEstimator.reset()
+            visualTtc.reset()
+            visualEstimates = emptyList()
             usbRanges = emptyList()
             updateMode()
             startPhoneCamera()
