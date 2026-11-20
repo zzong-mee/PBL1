@@ -149,7 +149,8 @@ class MainActivity : Activity() {
     private fun updateExternalStatus(code: Int) {
         usbState = code
         if (code != R.string.usb_receiving && code != R.string.external_vision_ready) {
-            latestTof = null
+            approachTracker.reset()
+            latestApproaches = emptyList()
             warningGate.reset()
         }
         cameraStatus = when (code) {
@@ -181,6 +182,7 @@ class MainActivity : Activity() {
         super.onSaveInstanceState(outState)
     }
     override fun onStart() { super.onStart(); foreground = true; if (!paused) { vision.start(); vision.connect() }; announceIntro() }
-    override fun onStop() { foreground = false; latestTof = null; warningGate.reset(); vision.stop(); speech.stop(); super.onStop() }
+    override fun onStop() { foreground = false; approachTracker.reset()
+            latestApproaches = emptyList(); warningGate.reset(); vision.stop(); speech.stop(); super.onStop() }
     override fun onDestroy() { vision.close(); speech.close(); super.onDestroy() }
 }
