@@ -61,14 +61,13 @@ class TrackedObjectRangeEstimator(
         val output = mutableListOf<ObjectRange>()
         for (match in matches) {
             val previous = states[match.trackId]
+            // Never replay an old sensor frame into a new filter.
+            if (previous != null && match.observedAtMs <= previous.lastObservedAtMs) continue
             val state = if (previous == null ||
-                match.observedAtMs <= previous.lastObservedAtMs ||
                 match.observedAtMs - previous.lastObservedAtMs > maxMeasurementsGapMs
             ) State(lastMatchedAtMs = match.observedAtMs, lastObservedAtMs = -1L)
             else previous
 
-            // Duplicate ToF timestamps must not be fed twice into the filter.
-            if (previous != null && match.observedAtMs == previous.lastObservedAtMs) continue
             val estimate = state.filter.update(match.distanceMm, match.observedAtMs) ?: continue
             state.lastMatchedAtMs = match.observedAtMs
             state.lastObservedAtMs = match.observedAtMs
