@@ -36,6 +36,7 @@ class TwoStageObjectTracker(
         val low = valid.filter { it.confidence < highConfidence }
         val unmatched = tracks.keys.toMutableSet()
         val output = mutableListOf<TrackedDetection>()
+        val matchedDetections = mutableSetOf<Detection>()
 
         fun associate(candidates: List<Detection>, allowNew: Boolean) {
             val available = candidates.toMutableList()
@@ -62,6 +63,7 @@ class TwoStageObjectTracker(
                 unmatched.remove(bestId)
                 available.remove(bestDetection)
                 output.add(TrackedDetection(bestId, bestDetection))
+                matchedDetections.add(bestDetection)
             }
             if (allowNew) for (detection in available) {
                 val id = nextId++
@@ -70,8 +72,15 @@ class TwoStageObjectTracker(
             }
         }
 
-        associate(high, allowNew = true)
+        // Associate existing tracks in two passes BEFORE creating new tracks.
+        // Otherwise a new high-score track could consume a low-score detection in the same frame.
+        associate(high, allowNew = false)
         associate(low, allowNew = false)
+        for (detection in high) if (detection !in matchedDetections) {
+            val id = nextId++
+            tracks[id] = Track(detection)
+            output.add(TrackedDetection(id, detection))
+        }
         for (id in unmatched) {
             val track = tracks.getValue(id)
             track.missing++
