@@ -188,6 +188,8 @@ class DeveloperActivity : Activity() {
         findViewById<View>(R.id.root).requestApplyInsets()
         usbMode = savedInstanceState?.getBoolean("usbMode", true) ?: true
         mockEnabled = savedInstanceState?.getBoolean("mockEnabled", true) ?: true
+        var usbTracks = emptyList<com.guideeye.app.vision.TwoStageObjectTracker.TrackedDetection>()
+        var phoneTracks = emptyList<com.guideeye.app.vision.TwoStageObjectTracker.TrackedDetection>()
         vision = ExternalVisionController(this, { code ->
             if (usbMode && foreground) {
                 findViewById<TextView>(R.id.camera_status).setText(code)
@@ -200,12 +202,12 @@ class DeveloperActivity : Activity() {
             if (usbMode && foreground) {
                 lastDetectionAt = android.os.SystemClock.elapsedRealtime()
                 lastDetectionCount = detections.size
-                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections)
+                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections,usbTracks)
                 val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence*100).toInt()}%" }
                 findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed,
                     objects.ifEmpty { getString(R.string.no_objects_detected) })
             } else bitmap.recycle()
-        })
+        }, onTracks = { tracks, _ -> usbTracks = tracks })
         phone = PhoneCameraController(this, { code ->
             if (!usbMode) {
                 findViewById<TextView>(R.id.camera_status).setText(code)
@@ -218,11 +220,11 @@ class DeveloperActivity : Activity() {
             if (!usbMode && foreground) {
                 lastDetectionAt = android.os.SystemClock.elapsedRealtime()
                 lastDetectionCount = detections.size
-                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap, detections)
+                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap, detections, phoneTracks)
                 val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence * 100).toInt()}%" }
                 findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed, objects)
             } else bitmap.recycle()
-        })
+        }, onTracks = { tracks, _ -> phoneTracks = tracks })
         findViewById<Button>(R.id.use_phone_camera).setOnClickListener {
             usb.disconnect()
             vision.stop()
