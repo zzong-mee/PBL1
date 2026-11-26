@@ -17,6 +17,13 @@ import com.guideeye.app.fusion.IndependentTofRiskEngine
 import com.guideeye.app.fusion.IndependentTofWarningGate
 import com.guideeye.app.fusion.TofApproachTracker
 import android.os.SystemClock
+import com.guideeye.app.fusion.TofOrientationSettings
+import com.guideeye.app.fusion.ProjectedCellAssociator
+import com.guideeye.app.fusion.ProjectedObjectDistance
+import com.guideeye.app.fusion.ProjectedRangeTracker
+import com.guideeye.app.fusion.ProjectedRiskEngine
+import com.guideeye.app.usb.TofGridFrame
+import com.guideeye.app.vision.TwoStageObjectTracker
 
 /** User entry screen: no scrolling, Mock values, or USB debugging controls. */
 class MainActivity : Activity() {
@@ -32,6 +39,43 @@ class MainActivity : Activity() {
     private val approachTracker = TofApproachTracker()
     private val tofRiskEngine = IndependentTofRiskEngine()
     private val tofWarningGate = IndependentTofWarningGate()
+
+    private var orientation = TofOrientationSettings()
+    private var fusionGrid: TofGridFrame? = null
+    private val fusionTracker = ProjectedRangeTracker()
+    private val fusionEngine = ProjectedRiskEngine()
+    private var fusionRisks = emptyList<ProjectedRiskEngine.Risk>()
+    private var fusionAt = -1L
+
+    private fun resetFusion() {
+        fusionGrid = null
+        fusionTracker.reset()
+        fusionEngine.reset()
+        fusionRisks = emptyList()
+        fusionAt = -1L
+    }
+
+    private fun updateFusion(tracks: List<TwoStageObjectTracker.TrackedDetection>, received: Long) {
+        if (!foreground || paused) return
+        val now = SystemClock.elapsedRealtime()
+        if (received !in 0..now || now-received > 750 || received <= fusionAt) return
+        try {
+            val cells = ProjectedCellAssociator.associate(
+                tracks, fusionGrid, received, now, orientation.orientations, orientation.swap)
+            val measurements = ProjectedObjectDistance.estimate(cells)
+            val estimates = fusionTracker.update(measurements, tracks.map { it.trackId }.toSet(), received, now)
+            fusionRisks = fusionEngine.evaluate(tracks, estimates, received, now)
+            fusionAt = received
+            android.util.Log.d("ThirdEyeFusion", "tracks=${tracks.size}, matched=${estimates.size}, danger=${fusionRisks.count { it.level == ProjectedRiskEngine.Level.DANGER }}, caution=${fusionRisks.count { it.level == ProjectedRiskEngine.Level.CAUTION }}")
+        } catch (e: Exception) {
+            resetFusion()
+            android.util.Log.e("ThirdEyeFusion", "Experimental fusion failed", e)
+        }
+    }
+
+    private fun freshFusionRisks(now: Long): List<ProjectedRiskEngine.Risk> =
+        if (foreground && !paused && fusionAt >= 0 && now-fusionAt in 0..750)
+            fusionRisks else emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +98,9 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.root).requestApplyInsets()
         vision = ExternalVisionController(this, ::updateExternalStatus,
             onGrid = { frame ->
+                if (foreground && !paused) {
+                    if (frame == null) resetFusion() else fusionGrid = frame
+                }
                 // ToF-only safety path: independent of camera inference or YOLO calibration.
                 val approaches = approachTracker.update(frame)
                 val now = SystemClock.elapsedRealtime()
@@ -68,7 +115,7 @@ class MainActivity : Activity() {
                         speech.speakWarning(message)
                     }
                 } else tofWarningGate.reset()
-            })
+            }, onTracks = ::updateFusion)
         speech = KoreanSpeechGuide(this) { status, available ->
             ready = available
             voiceUnavailable = !available
@@ -141,12 +188,14 @@ class MainActivity : Activity() {
     }
 
     private fun resetObstacleState() {
+        resetFusion()
         approachTracker.reset()
         tofWarningGate.reset()
     }
 
     private fun updateExternalStatus(code: Int) {
         usbState = code
+        if (code == R.string.external_vision_error) resetFusion()
         if (code != R.string.usb_receiving && code != R.string.external_vision_ready &&
             code != R.string.external_vision_error) {
             resetObstacleState()
@@ -179,7 +228,7 @@ class MainActivity : Activity() {
         outState.putBoolean("introAnnounced", introAnnounced)
         super.onSaveInstanceState(outState)
     }
-    override fun onStart() { super.onStart(); foreground = true; if (!paused) { vision.start(); vision.connect() }; announceIntro() }
+    override fun onStart() { super.onStart(); orientation = TofOrientationSettings.load(this); resetFusion(); foreground = true; if (!paused) { vision.start(); vision.connect() }; announceIntro() }
     override fun onStop() { foreground = false; resetObstacleState(); vision.stop(); speech.stop(); super.onStop() }
     override fun onDestroy() { vision.close(); speech.close(); super.onDestroy() }
 }
