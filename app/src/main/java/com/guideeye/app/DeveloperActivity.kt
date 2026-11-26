@@ -76,6 +76,9 @@ class DeveloperActivity : Activity() {
         setContentView(R.layout.activity_developer)
         setupFullTest()
         setupCalibration()
+        listOf(R.id.tof_overlay_enabled,R.id.tof_overlay_swap).forEach { id ->
+            findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ -> refreshTofOverlay() }
+        }
         distanceTone = DistanceToneController(this, { code ->
             findViewById<TextView>(R.id.distance_tone_status).setText(code)
             findViewById<Button>(R.id.toggle_distance_tone).setText(
@@ -224,6 +227,7 @@ class DeveloperActivity : Activity() {
                 lastDetectionAt = android.os.SystemClock.elapsedRealtime()
                 lastDetectionCount = detections.size
                 findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections,usbTracks)
+                refreshTofOverlay()
                 val objects = detections.joinToString { d ->
                     val trackId = usbTracks.firstOrNull { it.detection == d }?.trackId
                     val range = usbRanges.firstOrNull { it.trackId == trackId }
@@ -646,7 +650,16 @@ class DeveloperActivity : Activity() {
         }
     }
 
+    private fun refreshTofOverlay() {
+        val a=mount(true); val b=mount(false)
+        findViewById<DetectionPreview>(R.id.camera_preview).setTofOverlay(
+            gridFrame.takeIf { foreground && usbMode && findViewById<CheckBox>(R.id.tof_overlay_enabled).isChecked },
+            a.quarterTurns to a.mirrorColumns, b.quarterTurns to b.mirrorColumns,
+            findViewById<CheckBox>(R.id.tof_overlay_swap).isChecked)
+    }
+
     private fun refreshGrid() {
+        refreshTofOverlay()
         val frame=gridFrame
         if(frame==null) {
             renderDebugRisk(emptyList(), android.os.SystemClock.elapsedRealtime())
