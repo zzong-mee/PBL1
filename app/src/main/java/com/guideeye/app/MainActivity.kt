@@ -16,6 +16,7 @@ import com.guideeye.app.vision.YoloXDetector
 import com.guideeye.app.fusion.IndependentTofRiskEngine
 import com.guideeye.app.fusion.TofApproachTracker
 import android.os.SystemClock
+import com.guideeye.app.fusion.UnifiedWarningGate
 import com.guideeye.app.fusion.TofOrientationSettings
 import com.guideeye.app.fusion.ProjectedCellAssociator
 import com.guideeye.app.fusion.ProjectedObjectDistance
@@ -38,36 +39,27 @@ class MainActivity : Activity() {
     private val approachTracker = TofApproachTracker()
     private val tofRiskEngine = IndependentTofRiskEngine()
     private var tofRisks = emptyList<IndependentTofRiskEngine.Risk>()
-    private var lastWarningAt = -1L
-    private var lastWarningDanger = false
-    private var lastWarningObservation = -1L
+    private val warningGate = UnifiedWarningGate()
 
-    // Temporary shared rate limit; per-object deduplication follows in stage 8-4.
     private fun dispatchWarning(now: Long) {
         if (!foreground || paused || !ready) return
-        val tof = tofRisks.filter { now-it.observedAtMs in 0..750 }
-            .minWithOrNull(IndependentTofRiskEngine.warningPriority)
-        val fused = freshFusionRisks(now).firstOrNull {
+        val candidates = tofRisks.sortedWith(IndependentTofRiskEngine.warningPriority).map {
+            val danger = it.level == IndependentTofRiskEngine.Level.DANGER
+            val prefix = if (danger) "위험." else "주의."
+            UnifiedWarningGate.Candidate(danger,it.observedAtMs,
+                "$prefix 가까워지는 물체가 감지되었습니다.", sensor = it.sensor, zones = it.zones)
+        } + freshFusionRisks(now).filter {
             it.level != ProjectedRiskEngine.Level.SAFE &&
                 (it.estimate == null || now-it.estimate.measurement.observedAtMs in 0..750)
+        }.map {
+            val danger = it.level == ProjectedRiskEngine.Level.DANGER
+            val prefix = if (danger) "위험." else "주의."
+            val m = it.estimate?.measurement
+            UnifiedWarningGate.Candidate(danger,fusionAt,
+                "$prefix 주변에 위험 후보 물체가 감지되었습니다.",
+                it.trackId,it.classId,m?.sensor,m?.supportingZones?.toSet() ?: emptySet())
         }
-        val tofDanger = tof?.level == IndependentTofRiskEngine.Level.DANGER
-        val fusedDanger = fused?.level == ProjectedRiskEngine.Level.DANGER
-        // Prefer independent ToF on equal severity; never downgrade its warning.
-        val useTof = tof != null && (fused == null || tofDanger || !fusedDanger)
-        if (tof == null && fused == null) return
-        val danger = if (useTof) tofDanger else fusedDanger
-        val observed = if (useTof) tof!!.observedAtMs else fusionAt
-        val escalation = danger && !lastWarningDanger
-        if (!escalation && observed <= lastWarningObservation) return
-        if (!escalation && lastWarningAt >= 0 && now-lastWarningAt < 5000) return
-        val prefix = if (danger) "위험." else "주의."
-        val message = if (useTof) "$prefix 가까워지는 물체가 감지되었습니다."
-            else "$prefix 주변에 위험 후보 물체가 감지되었습니다."
-        speech.speakWarning(message)
-        lastWarningAt = now
-        lastWarningDanger = danger
-        lastWarningObservation = maxOf(lastWarningObservation, observed)
+        warningGate.offer(candidates,now)?.let { speech.speakWarning(it.message) }
     }
 
     private var orientation = TofOrientationSettings()
@@ -214,14 +206,15 @@ class MainActivity : Activity() {
         resetFusion()
         approachTracker.reset()
         tofRisks = emptyList()
-        lastWarningAt = -1L
-        lastWarningDanger = false
-        lastWarningObservation = -1L
+        warningGate.reset()
     }
 
     private fun updateExternalStatus(code: Int) {
         usbState = code
-        if (code == R.string.external_vision_error || code == R.string.external_camera_error) resetFusion()
+        if (code == R.string.external_vision_error || code == R.string.external_camera_error) {
+            resetFusion()
+            warningGate.resetVision()
+        }
         if (code != R.string.usb_receiving && code != R.string.external_vision_ready &&
             code != R.string.external_vision_error && code != R.string.external_camera_error) {
             resetObstacleState()
