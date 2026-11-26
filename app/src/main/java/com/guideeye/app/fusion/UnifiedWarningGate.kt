@@ -5,7 +5,8 @@ class UnifiedWarningGate {
     data class Candidate(
         val danger: Boolean, val observed: Long, val message: String,
         val trackId: Long? = null, val classId: Int? = null,
-        val sensor: Int? = null, val zones: Set<Int> = emptySet()
+        val sensor: Int? = null, val zones: Set<Int> = emptySet(),
+        val direction: ObjectDirection.Direction? = null
     )
     private data class Record(val candidate: Candidate, val announced: Long)
     private val records = mutableListOf<Record>()
