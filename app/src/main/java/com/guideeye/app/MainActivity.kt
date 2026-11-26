@@ -17,6 +17,7 @@ import com.guideeye.app.fusion.IndependentTofRiskEngine
 import com.guideeye.app.fusion.TofApproachTracker
 import android.os.SystemClock
 import com.guideeye.app.fusion.UnifiedWarningGate
+import com.guideeye.app.fusion.ObjectDirection
 import com.guideeye.app.fusion.TofOrientationSettings
 import com.guideeye.app.fusion.ProjectedCellAssociator
 import com.guideeye.app.fusion.ProjectedObjectDistance
@@ -47,7 +48,8 @@ class MainActivity : Activity() {
             val danger = it.level == IndependentTofRiskEngine.Level.DANGER
             val prefix = if (danger) "위험." else "주의."
             UnifiedWarningGate.Candidate(danger,it.observedAtMs,
-                "$prefix 가까워지는 물체가 감지되었습니다.", sensor = it.sensor, zones = it.zones)
+                "$prefix 가까워지는 물체가 감지되었습니다.", sensor = it.sensor, zones = it.zones,
+                direction = ObjectDirection.fromTof(it.sensor, it.zones, it.distanceMm.toDouble(), orientation))
         } + freshFusionRisks(now).filter {
             it.level != ProjectedRiskEngine.Level.SAFE &&
                 (it.estimate == null || now-it.estimate.measurement.observedAtMs in 0..750)
@@ -57,10 +59,10 @@ class MainActivity : Activity() {
             val m = it.estimate?.measurement
             UnifiedWarningGate.Candidate(danger,fusionAt,
                 "$prefix 주변에 위험 후보 물체가 감지되었습니다.",
-                it.trackId,it.classId,m?.sensor,m?.supportingZones?.toSet() ?: emptySet())
+                it.trackId,it.classId,m?.sensor,m?.supportingZones?.toSet() ?: emptySet(), it.direction)
         }
         warningGate.offer(candidates.filter { speech.canSpeakWarning(it.danger) },now)?.let {
-            speech.speakWarning(it.message, it.danger)
+            speech.speakWarning(it.message, it.danger, it.direction)
         }
     }
 
