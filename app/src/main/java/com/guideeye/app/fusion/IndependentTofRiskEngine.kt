@@ -20,6 +20,11 @@ class IndependentTofRiskEngine(
         val observedAtMs: Long,
         val level: Level = Level.CAUTION
     )
+    companion object {
+        val warningPriority = compareByDescending<Risk> { it.level == Level.DANGER }
+            .thenBy { it.ttcSeconds }.thenBy { it.distanceMm }
+    }
+
     fun evaluate(approaches: List<TofApproachTracker.Approach>, nowMs: Long): List<Risk> =
         approaches.asSequence().filter {
             it.sensor in 0..1 && it.zone in 0..63 &&
@@ -37,7 +42,7 @@ class IndependentTofRiskEngine(
             val ttc = nearest.distanceMm / speed
             val level = if (nearest.distanceMm <= 1500 && ttc <= 2.0) Level.DANGER else Level.CAUTION
             Risk(sensor, nearest.distanceMm, speed, ttc, nearest.observedAtMs, level)
-        }.sortedBy { it.ttcSeconds }.toList()
+        }.sortedWith(warningPriority).toList()
     // Sensor-local connected components; no camera identity or persistent IDs.
     private fun cluster(points: List<TofApproachTracker.Approach>): List<List<TofApproachTracker.Approach>> {
         val remaining = points.toMutableList()
