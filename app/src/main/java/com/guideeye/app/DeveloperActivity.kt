@@ -86,8 +86,12 @@ class DeveloperActivity : Activity() {
         setContentView(R.layout.activity_developer)
         setupFullTest()
         setupCalibration()
+        val savedOrientation = com.guideeye.app.fusion.TofOrientationSettings.load(this)
+        findViewById<CheckBox>(R.id.tof_overlay_swap).isChecked = savedOrientation.swap
+        findViewById<CheckBox>(R.id.tof_mirror_a).isChecked = savedOrientation.aMirror
+        findViewById<CheckBox>(R.id.tof_mirror_b).isChecked = savedOrientation.bMirror
         listOf(R.id.tof_overlay_enabled,R.id.tof_overlay_swap).forEach { id ->
-            findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ -> resetFusion(); refreshTofOverlay() }
+            findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ -> if (id == R.id.tof_overlay_swap) saveOrientation(); resetFusion(); refreshTofOverlay() }
         }
         distanceTone = DistanceToneController(this, { code ->
             findViewById<TextView>(R.id.distance_tone_status).setText(code)
@@ -171,10 +175,11 @@ class DeveloperActivity : Activity() {
         listOf(R.id.tof_rotation_a,R.id.tof_rotation_b).forEach { id ->
             findViewById<Spinner>(id).apply {
                 adapter=ArrayAdapter.createFromResource(this@DeveloperActivity,R.array.tof_rotations,android.R.layout.simple_spinner_dropdown_item)
+                setSelection(if (id == R.id.tof_rotation_a) savedOrientation.aTurns else savedOrientation.bTurns)
                 onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(parent:AdapterView<*>?, view:View?, position:Int, itemId:Long) {
                         this@DeveloperActivity.findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
-                        resetFusion(); radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
+                        saveOrientation(); resetFusion(); radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
                     }
                     override fun onNothingSelected(parent:AdapterView<*>?) {}
                 }
@@ -183,7 +188,7 @@ class DeveloperActivity : Activity() {
         listOf(R.id.tof_mirror_a,R.id.tof_mirror_b).forEach { id ->
             findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ ->
                 findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
-                resetFusion(); radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
+                saveOrientation(); resetFusion(); radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
             }
         }
         findViewById<CheckBox>(R.id.tof_mount_confirm).setOnCheckedChangeListener { _, confirmed ->
@@ -569,6 +574,16 @@ class DeveloperActivity : Activity() {
             else findViewById<TextView>(R.id.camera_status).setText(R.string.phone_permission)
         }
     }
+    private fun saveOrientation() {
+        val a = findViewById<Spinner>(R.id.tof_rotation_a).selectedItemPosition
+        val b = findViewById<Spinner>(R.id.tof_rotation_b).selectedItemPosition
+        if (a !in 0..3 || b !in 0..3) return
+        com.guideeye.app.fusion.TofOrientationSettings(a,
+            findViewById<CheckBox>(R.id.tof_mirror_a).isChecked, b,
+            findViewById<CheckBox>(R.id.tof_mirror_b).isChecked,
+            findViewById<CheckBox>(R.id.tof_overlay_swap).isChecked).save(this)
+    }
+
     private fun mount(left:Boolean)=TofMount(if(left)22.5 else -22.5,0.0,45.0,45.0,
         findViewById<Spinner>(if(left)R.id.tof_rotation_a else R.id.tof_rotation_b).selectedItemPosition.coerceAtLeast(0),
         findViewById<CheckBox>(if(left)R.id.tof_mirror_a else R.id.tof_mirror_b).isChecked)
@@ -759,6 +774,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { cancelCalibration("화면 종료 · 측정 취소"); foreground = false; resetFusion(); resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onStop() { saveOrientation(); cancelCalibration("화면 종료 · 측정 취소"); foreground = false; resetFusion(); resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
     override fun onDestroy() { radar.close(); spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }
