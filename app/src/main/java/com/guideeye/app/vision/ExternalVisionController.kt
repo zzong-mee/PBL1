@@ -70,7 +70,7 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
                 } else {
                     // Fixed physical mounting of the USB glasses camera.
                     val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height,
-                        android.graphics.Matrix().apply { postRotate(90f) }, true)
+                        android.graphics.Matrix().apply { postRotate(90f); postScale(-1f, 1f) }, true)
                     if (rotated !== bitmap) bitmap.recycle()
                     bitmap = rotated
                     decoded = bitmap
