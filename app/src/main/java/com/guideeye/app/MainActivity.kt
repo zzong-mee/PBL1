@@ -99,8 +99,7 @@ class MainActivity : Activity() {
             paused = !paused
             // Stop speech already playing/queued; explicit button feedback remains available when paused.
             speech.stop()
-            tofWarningGate.reset()
-            approachTracker.reset()
+            resetObstacleState()
             if (paused) vision.stop() else { vision.start(); vision.connect() }
             updatePauseUi()
             speech.speak(getString(if (paused) R.string.operation_paused_message else R.string.operation_resumed_message))
@@ -141,11 +140,16 @@ class MainActivity : Activity() {
             getString(if (paused) R.string.pause_state_paused else R.string.pause_state_active))
     }
 
+    private fun resetObstacleState() {
+        approachTracker.reset()
+        tofWarningGate.reset()
+    }
+
     private fun updateExternalStatus(code: Int) {
         usbState = code
-        if (code != R.string.usb_receiving && code != R.string.external_vision_ready) {
-            approachTracker.reset()
-            tofWarningGate.reset()
+        if (code != R.string.usb_receiving && code != R.string.external_vision_ready &&
+            code != R.string.external_vision_error) {
+            resetObstacleState()
         }
         cameraStatus = when (code) {
             R.string.usb_waiting, R.string.usb_receiving ->
@@ -176,7 +180,6 @@ class MainActivity : Activity() {
         super.onSaveInstanceState(outState)
     }
     override fun onStart() { super.onStart(); foreground = true; if (!paused) { vision.start(); vision.connect() }; announceIntro() }
-    override fun onStop() { foreground = false; approachTracker.reset()
-            tofWarningGate.reset(); vision.stop(); speech.stop(); super.onStop() }
+    override fun onStop() { foreground = false; resetObstacleState(); vision.stop(); speech.stop(); super.onStop() }
     override fun onDestroy() { vision.close(); speech.close(); super.onDestroy() }
 }
