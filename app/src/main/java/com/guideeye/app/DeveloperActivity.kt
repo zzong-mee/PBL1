@@ -60,6 +60,16 @@ class DeveloperActivity : Activity() {
     private val debugRiskEngine = IndependentTofRiskEngine()
     private val debugGate = IndependentTofWarningGate()
     private var debugRisks = emptyList<IndependentTofRiskEngine.Risk>()
+    private val projectedTracker = com.guideeye.app.fusion.ProjectedRangeTracker()
+    private val projectedRisk = com.guideeye.app.fusion.ProjectedRiskEngine()
+    private var fusedRisks = emptyList<com.guideeye.app.fusion.ProjectedRiskEngine.Risk>()
+    private var fusedAt = -1L
+    private fun resetFusion() {
+        projectedTracker.reset()
+        projectedRisk.reset()
+        fusedRisks = emptyList()
+        fusedAt = -1L
+    }
     private var debugWarning: IndependentTofRiskEngine.Risk? = null
     private lateinit var hrtf: HrtfTestController
     private lateinit var distanceTone: DistanceToneController
@@ -77,7 +87,7 @@ class DeveloperActivity : Activity() {
         setupFullTest()
         setupCalibration()
         listOf(R.id.tof_overlay_enabled,R.id.tof_overlay_swap).forEach { id ->
-            findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ -> refreshTofOverlay() }
+            findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ -> resetFusion(); refreshTofOverlay() }
         }
         distanceTone = DistanceToneController(this, { code ->
             findViewById<TextView>(R.id.distance_tone_status).setText(code)
@@ -164,7 +174,7 @@ class DeveloperActivity : Activity() {
                 onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(parent:AdapterView<*>?, view:View?, position:Int, itemId:Long) {
                         this@DeveloperActivity.findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
-                        radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
+                        resetFusion(); radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
                     }
                     override fun onNothingSelected(parent:AdapterView<*>?) {}
                 }
@@ -173,7 +183,7 @@ class DeveloperActivity : Activity() {
         listOf(R.id.tof_mirror_a,R.id.tof_mirror_b).forEach { id ->
             findViewById<CheckBox>(id).setOnCheckedChangeListener { _,_ ->
                 findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked=false
-                radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
+                resetFusion(); radar.stop(); spatial.stop(); spatialSelector.reset(); refreshGrid()
             }
         }
         findViewById<CheckBox>(R.id.tof_mount_confirm).setOnCheckedChangeListener { _, confirmed ->
@@ -206,18 +216,13 @@ class DeveloperActivity : Activity() {
         findViewById<View>(R.id.root).requestApplyInsets()
         usbMode = savedInstanceState?.getBoolean("usbMode", true) ?: true
         mockEnabled = savedInstanceState?.getBoolean("mockEnabled", true) ?: true
-        // Calibration is deliberately absent until measured on the physical glasses.
-        // No synthetic ToF distances are shown as object-specific measurements.
-        val rangeEstimator = com.guideeye.app.fusion.TrackedObjectRangeEstimator(null)
-        val visualTtc = com.guideeye.app.fusion.VisualExpansionTtcEstimator()
-        var visualEstimates = emptyList<com.guideeye.app.fusion.VisualExpansionTtcEstimator.Estimate>()
-        var usbRanges = emptyList<com.guideeye.app.fusion.TrackedObjectRangeEstimator.ObjectRange>()
         var usbTracks = emptyList<com.guideeye.app.vision.TwoStageObjectTracker.TrackedDetection>()
         var phoneTracks = emptyList<com.guideeye.app.vision.TwoStageObjectTracker.TrackedDetection>()
         vision = ExternalVisionController(this, { code ->
             if (usbMode && foreground) {
                 findViewById<TextView>(R.id.camera_status).setText(code)
                 if (code != R.string.external_vision_ready) {
+                    resetFusion()
                     findViewById<DetectionPreview>(R.id.camera_preview).clear()
                     findViewById<TextView>(R.id.video).setText(R.string.video_placeholder)
                 }
@@ -228,26 +233,22 @@ class DeveloperActivity : Activity() {
                 lastDetectionCount = detections.size
                 findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections,usbTracks)
                 refreshTofOverlay()
-                val objects = detections.joinToString { d ->
-                    val trackId = usbTracks.firstOrNull { it.detection == d }?.trackId
-                    val range = usbRanges.firstOrNull { it.trackId == trackId }
-                    val visual = visualEstimates.firstOrNull { it.trackId == trackId }
-                    val visualLabel = visual?.let { " 영상 TTC %.1f초(추정)".format(it.ttcSeconds) } ?: ""
-                    val detail = if (range == null) "거리 미보정$visualLabel" else {
-                        val ttc = range.ttcSeconds?.let { "%.1f초".format(it) } ?: "계산 불가"
-                        "거리 %.2fm, 접근 %.2fm/s, TTC %s".format(
-                            range.distanceMm / 1000.0, range.closingMmPerSecond / 1000.0, ttc)
-                    }
-                    "${YoloXDetector.labels.getOrNull(d.classId) ?: "객체"} #${trackId ?: "?"} $detail"
-                }
-                findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed,
-                    objects.ifEmpty { getString(R.string.no_objects_detected) })
+                renderFusion(elapsed)
             } else bitmap.recycle()
         }, onTracks = { tracks, received ->
-            usbTracks = tracks
-            visualEstimates = visualTtc.update(tracks, received)
-            usbRanges = rangeEstimator.update(
-                tracks, gridFrame, received, android.os.SystemClock.elapsedRealtime())
+            if (foreground && usbMode) {
+                usbTracks = tracks
+                val now = android.os.SystemClock.elapsedRealtime()
+                val a = mount(true); val b = mount(false)
+                val cells = com.guideeye.app.fusion.ProjectedCellAssociator.associate(
+                    tracks, gridFrame, received, now,
+                    listOf(a.quarterTurns to a.mirrorColumns, b.quarterTurns to b.mirrorColumns),
+                    findViewById<CheckBox>(R.id.tof_overlay_swap).isChecked)
+                val measurements = com.guideeye.app.fusion.ProjectedObjectDistance.estimate(cells)
+                val estimates = projectedTracker.update(measurements, tracks.map { it.trackId }.toSet(), received, now)
+                fusedRisks = projectedRisk.evaluate(tracks, estimates, received, now)
+                fusedAt = received
+            }
         })
         phone = PhoneCameraController(this, { code ->
             if (!usbMode) {
@@ -270,10 +271,7 @@ class DeveloperActivity : Activity() {
             usb.disconnect()
             vision.stop()
             usbMode = false
-            rangeEstimator.reset()
-            visualTtc.reset()
-            visualEstimates = emptyList()
-            usbRanges = emptyList()
+            resetFusion()
             updateMode()
             startPhoneCamera()
         }
@@ -289,6 +287,7 @@ class DeveloperActivity : Activity() {
                     }
                 }
                 if (status != R.string.usb_receiving) {
+                    resetFusion()
                     if (status != R.string.external_camera_error) clearUsbDistances()
                     vision.stop()
                     findViewById<DetectionPreview>(R.id.camera_preview).clear()
@@ -366,6 +365,25 @@ class DeveloperActivity : Activity() {
             R.id.hrtf_back_left, R.id.hrtf_back_right, R.id.hrtf_circle, R.id.hrtf_stop, R.id.tof_spatial_toggle, R.id.radar_toggle).forEach {
             ButtonTouchFeedback.install(findViewById(it)) { name -> speech.announceButton(name) }
         }
+    }
+
+    private fun renderFusion(elapsed: Long) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val lines = fusedRisks.filter { now-fusedAt in 0..750 }.mapIndexed { i, risk ->
+            val e = risk.estimate
+            val distance = risk.conservativeDistanceMm?.let { "%.2fm".format(it/1000) } ?: "미확정"
+            val speed = e?.closingMmPerSecond?.let { "%.2fm/s".format(it/1000) } ?: "미확정"
+            val mt = e?.ttcSeconds?.let { "%.1f초".format(it) } ?: "—"
+            val vt = risk.visualTtcSeconds?.let { "%.1f초".format(it) } ?: "—"
+            val growth = risk.expansionPerSecond?.let { "%.1f%%/s".format(it*100) } ?: "—"
+            val label = YoloXDetector.labels.getOrNull(risk.classId) ?: "미분류"
+            "${i+1}. #${risk.trackId} $label · ${risk.mobility} · ${risk.level} (점수 ${risk.score})\n" +
+                "거리 $distance · 접근 $speed · ToF TTC $mt · 영상 TTC $vt\n" +
+                "크기 변화 $growth · 경로 중첩 %.0f%% → %.0f%% · %s".format(
+                    risk.pathOverlap*100,risk.predictedPathOverlap*100,risk.reason)
+        }
+        findViewById<TextView>(R.id.video).text = "실험적 센서 융합 · 미보정 · 음성 경고 없음\n" +
+            lines.ifEmpty { listOf("유효 객체 없음 또는 측정 대기") }.joinToString("\n\n")
     }
 
     private fun calibrationStatus(message: String) {
@@ -518,6 +536,11 @@ class DeveloperActivity : Activity() {
             if(gridFrame?.let { android.os.SystemClock.elapsedRealtime()-it.receivedAt>1000 }==true) {
                 gridFrame=null; resetDebugRisk(); refreshGrid()
             } else if(gridFrame!=null) refreshGrid()
+            if (usbMode && fusedAt >= 0 && android.os.SystemClock.elapsedRealtime()-fusedAt > 750) {
+                fusedRisks = emptyList()
+                fusedAt = -1L
+                findViewById<TextView>(R.id.video).text = "융합 결과 만료 · 새 영상 대기"
+            }
             if (fullTestEnabled) refreshFullTest()
             window.decorView.postDelayed(this,200)
         }
@@ -701,6 +724,7 @@ class DeveloperActivity : Activity() {
         findViewById<TextView>(R.id.right_distance).setText(R.string.usb_right_waiting)
     }
     private fun updateMode() {
+        resetFusion()
         cancelCalibration("모드 변경 · 측정 취소")
         resetDebugRisk()
         gridFrame = null
@@ -734,6 +758,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { cancelCalibration("화면 종료 · 측정 취소"); foreground = false; resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onStop() { cancelCalibration("화면 종료 · 측정 취소"); foreground = false; resetFusion(); resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
     override fun onDestroy() { radar.close(); spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }
