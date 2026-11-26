@@ -59,7 +59,9 @@ class MainActivity : Activity() {
                 "$prefix 주변에 위험 후보 물체가 감지되었습니다.",
                 it.trackId,it.classId,m?.sensor,m?.supportingZones?.toSet() ?: emptySet())
         }
-        warningGate.offer(candidates,now)?.let { speech.speakWarning(it.message) }
+        warningGate.offer(candidates.filter { speech.canSpeakWarning(it.danger) },now)?.let {
+            speech.speakWarning(it.message, it.danger)
+        }
     }
 
     private var orientation = TofOrientationSettings()
@@ -155,7 +157,7 @@ class MainActivity : Activity() {
                 else -> vision.central()?.let { getString(R.string.central_object_result, YoloXDetector.labels[it.classId]) }
                     ?: getString(R.string.central_object_uncertain)
             }
-            speech.speak(message)
+            speech.speakManual(message)
         }
         findViewById<Button>(R.id.listen_help).setOnClickListener {
             paused = !paused
