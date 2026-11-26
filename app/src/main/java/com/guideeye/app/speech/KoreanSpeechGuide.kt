@@ -8,6 +8,7 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import com.guideeye.app.R
+import com.guideeye.app.fusion.ObjectDirection
 import java.util.Locale
 
 class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -> Unit) {
@@ -80,13 +81,16 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
     }
 
     /** Warnings preempt ordinary speech; only danger may interrupt caution. */
-    fun speakWarning(message: String, danger: Boolean = true): Boolean {
+    fun speakWarning(message: String, danger: Boolean = true,
+                     direction: ObjectDirection.Direction? = null): Boolean {
         if (!canSpeakWarning(danger)) return false
         val id = "obstacle-warning-${++sequence}"
         warningId = id
         warningDanger = danger
         // Continuous tone: a short dot or a long dash (1:3 duration ratio).
         val durationMs = if (danger) 450 else 150
+        // Direction is carried to the audio boundary; spatial rendering is not yet enabled.
+        android.util.Log.d("ThirdEyeAudio", "danger=$danger, azimuth=${direction?.azimuthDegrees}, elevation=${direction?.elevationDegrees}")
         engine?.stop()
         val played = runCatching {
             warningTone?.stopTone()
