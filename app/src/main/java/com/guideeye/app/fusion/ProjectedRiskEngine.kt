@@ -10,7 +10,8 @@ class ProjectedRiskEngine {
         val estimate: ProjectedRangeTracker.Estimate?, val mobility: ObjectMobility.Type,
         val level: Level, val conservativeDistanceMm: Double?, val reason: String,
         val visualTtcSeconds: Double?, val expansionPerSecond: Double?,
-        val pathOverlap: Double, val predictedPathOverlap: Double, val score: Int)
+        val pathOverlap: Double, val predictedPathOverlap: Double, val score: Int,
+        val direction: ObjectDirection.Direction? = null)
     private data class History(val x: Double, val scale: Double, val at: Long, val classId: Int)
     private val history = mutableMapOf<Long, History>()
     private val visual = VisualExpansionTtcEstimator()
@@ -79,7 +80,8 @@ class ProjectedRiskEngine {
             }
             Risk(track.trackId,d.classId,e,mobility,level,distance,
                 if(immediate) "NEAR_MOBILE_OR_UNKNOWN" else "COMPOSITE",
-                vt,expansion,path,predicted,score)
+                vt,expansion,path,predicted,score,
+                ObjectDirection.fromCamera(x, (d.top+d.bottom)/2.0))
         }.sortedWith(compareByDescending<Risk> { it.level.ordinal }
             .thenByDescending { it.score }
             .thenBy { listOfNotNull(it.visualTtcSeconds,it.estimate?.ttcSeconds).minOrNull() ?: Double.POSITIVE_INFINITY }
