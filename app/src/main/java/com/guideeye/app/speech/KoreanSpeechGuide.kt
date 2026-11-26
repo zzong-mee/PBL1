@@ -1,6 +1,8 @@
 package com.guideeye.app.speech
 
 import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -13,13 +15,14 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
     private var engine: TextToSpeech? = null
     private var ready = false
     private var closed = false
+    private val dangerTone = runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 70) }.getOrNull()
     private var warningId: String? = null
     private var warningDanger = false
     private var sequence = 0L
     private var pendingManual: Pair<Long, String>? = null
 
     fun canSpeakWarning(danger: Boolean): Boolean =
-        ready && !closed && (warningId == null || (danger && !warningDanger))
+        !closed && (if (danger) dangerTone != null || ready else ready) && (warningId == null || (danger && !warningDanger))
 
     private fun finishWarning(id: String?) {
         handler.post {
@@ -61,7 +64,7 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
     }
 
     fun speak(message: String): Boolean {
-        if (!ready || closed) return false
+        if (!ready || closed || warningId != null) return false
         val accepted = engine?.speak(message, TextToSpeech.QUEUE_ADD, null, "guideeye-test") == TextToSpeech.SUCCESS
         if (!accepted) report(R.string.tts_error)
         return accepted
@@ -82,6 +85,15 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
         val id = "obstacle-warning-${++sequence}"
         warningId = id
         warningDanger = danger
+        if (danger) {
+            engine?.stop()
+            val played = runCatching { dangerTone?.startTone(ToneGenerator.TONE_PROP_BEEP, 300) == true }.getOrDefault(false)
+            if (played) {
+                handler.postDelayed({ finishWarning(id) }, 300)
+                return true
+            }
+            // Fallback only if the tone cannot be played.
+        }
         val accepted = engine?.speak(message, TextToSpeech.QUEUE_FLUSH, null, id) == TextToSpeech.SUCCESS
         if (!accepted) { finishWarning(id); report(R.string.tts_error) }
         return accepted
@@ -96,12 +108,13 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
         }
     }
 
-    fun stop() { warningId = null; warningDanger = false; pendingManual = null; engine?.stop() }
+    fun stop() { warningId = null; warningDanger = false; pendingManual = null; dangerTone?.stopTone(); engine?.stop() }
     fun close() {
         closed = true
         ready = false
         handler.removeCallbacksAndMessages(null)
         engine?.stop()
+        dangerTone?.release()
         engine?.shutdown()
         engine = null
     }
