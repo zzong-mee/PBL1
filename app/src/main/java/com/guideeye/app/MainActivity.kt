@@ -43,7 +43,7 @@ class MainActivity : Activity() {
     private val warningGate = UnifiedWarningGate()
 
     private fun dispatchWarning(now: Long) {
-        if (!foreground || paused || !ready) return
+        if (!foreground || paused || !::speech.isInitialized) return
         val candidates = tofRisks.sortedWith(IndependentTofRiskEngine.warningPriority).map {
             val danger = it.level == IndependentTofRiskEngine.Level.DANGER
             val prefix = if (danger) "위험." else "주의."
