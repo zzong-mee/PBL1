@@ -74,6 +74,15 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
                     if (rotated !== bitmap) bitmap.recycle()
                     bitmap = rotated
                     decoded = bitmap
+                    // Center crop to landscape 4:3 without stretching pixels.
+                    val cropWidth = minOf(bitmap.width, bitmap.height * 4 / 3).coerceAtLeast(1)
+                    val cropHeight = minOf(bitmap.height, cropWidth * 3 / 4).coerceAtLeast(1)
+                    val cropped = Bitmap.createBitmap(bitmap,
+                        (bitmap.width - cropWidth) / 2, (bitmap.height - cropHeight) / 2,
+                        cropWidth, cropHeight)
+                    if (cropped !== bitmap) bitmap.recycle()
+                    bitmap = cropped
+                    decoded = bitmap
                 }
                 val frame = bitmap
                 val start=SystemClock.elapsedRealtime()
