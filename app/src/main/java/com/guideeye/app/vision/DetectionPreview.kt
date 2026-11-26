@@ -5,6 +5,7 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
 import com.guideeye.app.fusion.CameraTofProjection
+import com.guideeye.app.usb.TofGridColorPalette
 
 /** Shows the exact analyzed image with fit-center mapping, not a separately cropped preview. */
 class DetectionPreview(context: Context, attrs: AttributeSet? = null) : View(context,attrs) {
@@ -28,7 +29,6 @@ class DetectionPreview(context: Context, attrs: AttributeSet? = null) : View(con
         canvas.clipRect(bounds)
         for ((s,g) in listOf(grid.left,grid.right).withIndex()) {
             if (g.ageAtReceiptMs !in 0..1000 || elapsed > 1000-g.ageAtReceiptMs || g.mm.size != 64 || g.status.size != 64) continue
-            val color = if (s == 0) Color.rgb(70,160,255) else Color.rgb(60,230,120)
             fun project(row: Double, col: Double, distance: Double): PointF? {
                 val point = CameraTofProjection.project(s, swapSensors, row, col, distance,
                     bounds.width().toDouble()/bounds.height()) ?: return null
@@ -42,18 +42,21 @@ class DetectionPreview(context: Context, attrs: AttributeSet? = null) : View(con
                 val corners=listOf(project(row.toDouble(),col.toDouble(),range),project(row.toDouble(),col+1.0,range),project(row+1.0,col+1.0,range),project(row+1.0,col.toDouble(),range)).filterNotNull()
                 if(corners.size!=4) continue
                 val path=Path().apply { moveTo(corners[0].x,corners[0].y); corners.drop(1).forEach { lineTo(it.x,it.y) }; close() }
-                p.color=if(valid) color else Color.GRAY
-                p.alpha=if(valid) 45 else 15; p.style=Paint.Style.FILL; canvas.drawPath(path,p)
-                p.alpha=180; p.style=Paint.Style.STROKE; canvas.drawPath(path,p)
+                p.color=TofGridColorPalette.backgroundColor(d.takeIf { valid })
+                p.alpha=if(valid) 100 else 25; p.style=Paint.Style.FILL; canvas.drawPath(path,p)
+                p.alpha=220; p.style=Paint.Style.STROKE; canvas.drawPath(path,p)
                 val center=project(row+.5,col+.5,range) ?: continue
                 p.style=Paint.Style.FILL; p.color=Color.WHITE; p.alpha=255
-                canvas.drawText(if(valid) "${if(s==0) "A" else "B"} ${d}mm" else "—",center.x,center.y,p)
+                val label = "${if(s==0) "A" else "B"} ${if(valid) "${d}mm" else "—"}"
+                p.setShadowLayer(2f,0f,1f,Color.BLACK)
+                canvas.drawText(label,center.x,center.y,p)
+                p.clearShadowLayer()
             }
         }
         p.style=Paint.Style.FILL; p.color=Color.BLACK; p.alpha=210
         canvas.drawRect(bounds.left,bounds.top,bounds.right,bounds.top+p.textSize*1.5f,p)
         p.color=Color.WHITE
-        canvas.drawText("예상 투영 · 미보정 · A/B 확인 필요",bounds.left+4,bounds.top+p.textSize,p)
+        canvas.drawText("거리 히트맵 투영 · 미보정",bounds.left+4,bounds.top+p.textSize,p)
         canvas.restore()
         postInvalidateDelayed(250)
     }
