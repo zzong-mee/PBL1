@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import com.guideeye.app.fusion.CameraTofProjection
 
 /** Shows the exact analyzed image with fit-center mapping, not a separately cropped preview. */
 class DetectionPreview(context: Context, attrs: AttributeSet? = null) : View(context,attrs) {
@@ -22,33 +23,19 @@ class DetectionPreview(context: Context, attrs: AttributeSet? = null) : View(con
         val grid = tof ?: return
         val elapsed = android.os.SystemClock.elapsedRealtime() - grid.receivedAt
         if (elapsed !in 0..1000) return
-        // Assumed horizontal FOV of the upright image: 60 degrees, square pixels.
-        // Coordinates already refer to the corrected upright, mirrored, cropped preview.
-        val focal = bounds.width() / (2.0 * kotlin.math.tan(Math.toRadians(30.0)))
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 1.5f; textSize = 10f * resources.displayMetrics.scaledDensity }
         canvas.save()
         canvas.clipRect(bounds)
         for ((s,g) in listOf(grid.left,grid.right).withIndex()) {
             if (g.ageAtReceiptMs !in 0..1000 || elapsed > 1000-g.ageAtReceiptMs || g.mm.size != 64 || g.status.size != 64) continue
-            val m = if ((s == 0) != swapSensors) com.guideeye.app.fusion.MeasuredMount.left else com.guideeye.app.fusion.MeasuredMount.right
-            val yaw = Math.toRadians(m.yawDegrees)
-            val t = kotlin.math.tan(Math.toRadians(22.5))
             val color = if (s == 0) Color.rgb(70,160,255) else Color.rgb(60,230,120)
             fun project(row: Double, col: Double, distance: Double): PointF? {
-                val x = (2*col/8-1)*t
-                val y = (1-2*row/8)*t
-                val z = 1.0
-                val k = distance / kotlin.math.sqrt(x*x+y*y+z*z)
-                val px = k*(x*kotlin.math.cos(yaw)+z*kotlin.math.sin(yaw))+m.xMm
-                val py = k*y+m.yMm
-                val pz = k*(z*kotlin.math.cos(yaw)-x*kotlin.math.sin(yaw))+m.zMm
-                if (pz <= 0) return null
-                return PointF((bounds.centerX()+focal*px/pz).toFloat(), (bounds.centerY()-focal*py/pz).toFloat())
+                val point = CameraTofProjection.project(s, swapSensors, row, col, distance,
+                    bounds.width().toDouble()/bounds.height()) ?: return null
+                return PointF(bounds.left+point.x*bounds.width(), bounds.top+point.y*bounds.height())
             }
             for (i in 0..63) {
-                var row=i/8; var col=i%8
-                repeat(orientations[s].first) { val old=row; row=col; col=7-old }
-                if (orientations[s].second) col=7-col
+                val (row,col) = CameraTofProjection.orientedZone(i, orientations[s].first, orientations[s].second)
                 val d=g.mm[i]
                 val valid=d != null && d in 1..4000 && g.status[i] in listOf(5,6,9)
                 val range=if(valid) d!!.toDouble() else 2000.0
