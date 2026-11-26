@@ -18,6 +18,9 @@ import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.AdapterView
 import com.guideeye.app.audio.*
+import com.guideeye.app.fusion.IndependentTofRiskEngine
+import com.guideeye.app.fusion.IndependentTofWarningGate
+import com.guideeye.app.fusion.TofApproachTracker
 import com.guideeye.app.usb.TofGrid
 import com.guideeye.app.usb.TofGridFrame
 import com.guideeye.app.audio.HrtfTestController
@@ -47,6 +50,11 @@ class DeveloperActivity : Activity() {
     private lateinit var spatial: TofSpatialController
     private val spatialSelector=TofTargetSelector()
     private var gridFrame: TofGridFrame?=null
+    private val debugApproach = TofApproachTracker()
+    private val debugRiskEngine = IndependentTofRiskEngine()
+    private val debugGate = IndependentTofWarningGate()
+    private var debugRisks = emptyList<IndependentTofRiskEngine.Risk>()
+    private var debugWarning: IndependentTofRiskEngine.Risk? = null
     private lateinit var hrtf: HrtfTestController
     private lateinit var distanceTone: DistanceToneController
     private var fullTestEnabled = false
@@ -295,8 +303,14 @@ class DeveloperActivity : Activity() {
             findViewById<TextView>(R.id.sensor_status).setText(
                 if (failed) R.string.tof_device_error else R.string.usb_sensor_status)
         }, { frame ->
-            gridFrame=frame
-            refreshGrid()
+            if (foreground && usbMode) {
+                gridFrame=frame
+                val now = android.os.SystemClock.elapsedRealtime()
+                debugRisks = debugRiskEngine.evaluate(debugApproach.update(frame), now)
+                debugWarning = debugGate.offer(debugRisks, now)
+                if (frame == null) resetDebugRisk()
+                refreshGrid()
+            }
         })
         findViewById<Button>(R.id.connect_usb).setOnClickListener {
             usbMode = true
@@ -377,9 +391,7 @@ class DeveloperActivity : Activity() {
         if (usbMode && recent(lastSensorAt, 1500)) stages.add("receive")
         if (validGrid) stages.add("tof")
         if (validGrid && validPoints > 0) stages.add("validate")
-        if (validGrid && validPoints > 0 &&
-            findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked &&
-            (radar.enabled || spatial.enabled)) stages.add("candidate")
+        if (validGrid && debugRisks.any { now - it.observedAtMs in 0..750 }) stages.add("candidate")
         if (usbMode && recent(lastJpegAt, 1500)) stages.add("jpeg")
         if (recent(lastDetectionAt, 1500)) stages.add("yolo")
         if (recent(lastSpeechAt, 2500)) stages.add("tts")
@@ -392,7 +404,7 @@ class DeveloperActivity : Activity() {
         override fun run() {
             if(!foreground)return
             if(gridFrame?.let { android.os.SystemClock.elapsedRealtime()-it.receivedAt>1000 }==true) {
-                gridFrame=null; refreshGrid()
+                gridFrame=null; resetDebugRisk(); refreshGrid()
             } else if(gridFrame!=null) refreshGrid()
             if (fullTestEnabled) refreshFullTest()
             window.decorView.postDelayed(this,200)
@@ -443,7 +455,7 @@ class DeveloperActivity : Activity() {
         return cells
     }
 
-    private fun updateGridHeatmap(gridId: Int, readings: List<Int?>?) {
+    private fun updateGridHeatmap(gridId: Int, readings: List<Int?>?, highlights: Map<Int, IndependentTofRiskEngine.Level> = emptyMap()) {
         val grid = findViewById<GridLayout>(gridId)
         // Reuse the 64 views: no allocation on each sensor refresh.
         if (grid.childCount == 0) {
@@ -472,14 +484,64 @@ class DeveloperActivity : Activity() {
             val cell = grid.getChildAt(index) as TextView
             val distance = readings?.getOrNull(index)
             cell.text = distance?.toString() ?: "—"
-            cell.setBackgroundColor(TofGridColorPalette.backgroundColor(distance))
+            val level = highlights[index]
+            if (distance != null && level != null) {
+                cell.background = GradientDrawable().apply {
+                    setColor(TofGridColorPalette.backgroundColor(distance))
+                    setStroke(dp(2), if (level == IndependentTofRiskEngine.Level.DANGER)
+                        Color.RED else Color.YELLOW)
+                }
+            } else cell.setBackgroundColor(TofGridColorPalette.backgroundColor(distance))
             cell.setTextColor(TofGridColorPalette.textColor(distance))
+        }
+    }
+
+    private fun resetDebugRisk() {
+        debugApproach.reset()
+        debugGate.reset()
+        debugRisks = emptyList()
+        debugWarning = null
+    }
+
+    private fun debugHighlights(sensor: Int, m: TofMount, risks: List<IndependentTofRiskEngine.Risk>): Map<Int, IndependentTofRiskEngine.Level> {
+        val result = mutableMapOf<Int, IndependentTofRiskEngine.Level>()
+        for (risk in risks.filter { it.sensor == sensor }.asReversed()) {
+            for (zone in risk.zones) {
+                var row = zone / 8
+                var col = zone % 8
+                repeat(m.quarterTurns) {
+                    val oldRow = row
+                    row = col
+                    col = 7 - oldRow
+                }
+                if (m.mirrorColumns) col = 7 - col
+                result[row * 8 + col] = risk.level
+            }
+        }
+        return result
+    }
+
+    private fun renderDebugRisk(risks: List<IndependentTofRiskEngine.Risk>, now: Long) {
+        val lines = risks.mapIndexed { index, risk ->
+            "%d. 센서 %s · %s · %.2fm · %.2fm/s · TTC %.2f초".format(
+                index + 1, if (risk.sensor == 0) "A" else "B", risk.level.name,
+                risk.distanceMm / 1000.0, risk.closingMmPerSecond / 1000.0, risk.ttcSeconds)
+        }
+        val cooldown = debugGate.remainingCooldownMs(now) / 1000.0
+        val candidate = risks.firstOrNull()
+        val warning = debugWarning?.takeIf { now - it.observedAtMs in 0..750 }
+        findViewById<TextView>(R.id.tof_risk_debug).text = buildString {
+            appendLine(if (lines.isEmpty()) "위험 후보 없음 (또는 측정 대기)" else lines.joinToString("\n"))
+            appendLine("최우선 후보: " + (candidate?.let { "센서 " + (if (it.sensor == 0) "A" else "B") + " " + it.level.name } ?: "없음"))
+            appendLine("모의 경고: " + (warning?.level?.name ?: "없음"))
+            append("모의 쿨다운 %.1f초 · 음성 출력 없음".format(cooldown))
         }
     }
 
     private fun refreshGrid() {
         val frame=gridFrame
         if(frame==null) {
+            renderDebugRisk(emptyList(), android.os.SystemClock.elapsedRealtime())
             updateGridHeatmap(R.id.tof_grid_a, null)
             updateGridHeatmap(R.id.tof_grid_b, null)
             findViewById<TextView>(R.id.tof_grid_waiting).visibility = View.VISIBLE
@@ -490,8 +552,10 @@ class DeveloperActivity : Activity() {
         val now=android.os.SystemClock.elapsedRealtime()
         val elapsed=now-frame.receivedAt
         val a=mount(true); val b=mount(false)
-        updateGridHeatmap(R.id.tof_grid_a, orientedGrid(frame.left,a,elapsed))
-        updateGridHeatmap(R.id.tof_grid_b, orientedGrid(frame.right,b,elapsed))
+        val risks = debugRisks.filter { now - it.observedAtMs in 0..750 }
+        renderDebugRisk(risks, now)
+        updateGridHeatmap(R.id.tof_grid_a, orientedGrid(frame.left,a,elapsed), debugHighlights(0,a,risks))
+        updateGridHeatmap(R.id.tof_grid_b, orientedGrid(frame.right,b,elapsed), debugHighlights(1,b,risks))
         if(!findViewById<CheckBox>(R.id.tof_mount_confirm).isChecked || !foreground || !usbMode || (!spatial.enabled && !radar.enabled)) {
             radar.invalidate(); spatial.invalidate(); return
         }
@@ -505,7 +569,7 @@ class DeveloperActivity : Activity() {
         } ?: getString(R.string.distance_tone_no_target)
     }
     private fun clearUsbDistances() {
-        gridFrame=null; radar.invalidate(); spatial.invalidate(); spatialSelector.reset()
+        gridFrame=null; resetDebugRisk(); renderDebugRisk(emptyList(), android.os.SystemClock.elapsedRealtime()); radar.invalidate(); spatial.invalidate(); spatialSelector.reset()
         updateGridHeatmap(R.id.tof_grid_a, null)
         updateGridHeatmap(R.id.tof_grid_b, null)
         findViewById<TextView>(R.id.tof_grid_waiting).visibility = View.VISIBLE
@@ -515,6 +579,9 @@ class DeveloperActivity : Activity() {
         findViewById<TextView>(R.id.right_distance).setText(R.string.usb_right_waiting)
     }
     private fun updateMode() {
+        resetDebugRisk()
+        gridFrame = null
+        refreshGrid()
         radar.stop(); spatial.stop(); spatialSelector.reset()
         distanceTone.stop()
         distances.stop()
@@ -544,6 +611,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { foreground = false; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onStop() { foreground = false; resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
     override fun onDestroy() { radar.close(); spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }
