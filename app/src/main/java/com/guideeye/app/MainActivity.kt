@@ -14,7 +14,6 @@ import com.guideeye.app.speech.KoreanSpeechGuide
 import com.guideeye.app.vision.ExternalVisionController
 import com.guideeye.app.vision.YoloXDetector
 import com.guideeye.app.fusion.IndependentTofRiskEngine
-import com.guideeye.app.fusion.IndependentTofWarningGate
 import com.guideeye.app.fusion.TofApproachTracker
 import android.os.SystemClock
 import com.guideeye.app.fusion.TofOrientationSettings
@@ -38,7 +37,38 @@ class MainActivity : Activity() {
     private var cameraStatus = R.string.external_disconnected
     private val approachTracker = TofApproachTracker()
     private val tofRiskEngine = IndependentTofRiskEngine()
-    private val tofWarningGate = IndependentTofWarningGate()
+    private var tofRisks = emptyList<IndependentTofRiskEngine.Risk>()
+    private var lastWarningAt = -1L
+    private var lastWarningDanger = false
+    private var lastWarningObservation = -1L
+
+    // Temporary shared rate limit; per-object deduplication follows in stage 8-4.
+    private fun dispatchWarning(now: Long) {
+        if (!foreground || paused || !ready) return
+        val tof = tofRisks.filter { now-it.observedAtMs in 0..750 }
+            .minWithOrNull(IndependentTofRiskEngine.warningPriority)
+        val fused = freshFusionRisks(now).firstOrNull {
+            it.level != ProjectedRiskEngine.Level.SAFE &&
+                (it.estimate == null || now-it.estimate.measurement.observedAtMs in 0..750)
+        }
+        val tofDanger = tof?.level == IndependentTofRiskEngine.Level.DANGER
+        val fusedDanger = fused?.level == ProjectedRiskEngine.Level.DANGER
+        // Prefer independent ToF on equal severity; never downgrade its warning.
+        val useTof = tof != null && (fused == null || tofDanger || !fusedDanger)
+        if (tof == null && fused == null) return
+        val danger = if (useTof) tofDanger else fusedDanger
+        val observed = if (useTof) tof!!.observedAtMs else fusionAt
+        val escalation = danger && !lastWarningDanger
+        if (!escalation && observed <= lastWarningObservation) return
+        if (!escalation && lastWarningAt >= 0 && now-lastWarningAt < 5000) return
+        val prefix = if (danger) "위험." else "주의."
+        val message = if (useTof) "$prefix 가까워지는 물체가 감지되었습니다."
+            else "$prefix 주변에 위험 후보 물체가 감지되었습니다."
+        speech.speakWarning(message)
+        lastWarningAt = now
+        lastWarningDanger = danger
+        lastWarningObservation = maxOf(lastWarningObservation, observed)
+    }
 
     private var orientation = TofOrientationSettings()
     private var fusionGrid: TofGridFrame? = null
@@ -66,6 +96,7 @@ class MainActivity : Activity() {
             val estimates = fusionTracker.update(measurements, tracks.map { it.trackId }.toSet(), received, now)
             fusionRisks = fusionEngine.evaluate(tracks, estimates, received, now)
             fusionAt = received
+            dispatchWarning(now)
             android.util.Log.d("ThirdEyeFusion", "tracks=${tracks.size}, matched=${estimates.size}, danger=${fusionRisks.count { it.level == ProjectedRiskEngine.Level.DANGER }}, caution=${fusionRisks.count { it.level == ProjectedRiskEngine.Level.CAUTION }}")
         } catch (e: Exception) {
             resetFusion()
@@ -104,17 +135,9 @@ class MainActivity : Activity() {
                 // ToF-only safety path: independent of camera inference or YOLO calibration.
                 val approaches = approachTracker.update(frame)
                 val now = SystemClock.elapsedRealtime()
-                if (foreground && !paused && ready && frame != null) {
-                    val risks = tofRiskEngine.evaluate(approaches, now)
-                    tofWarningGate.offer(risks, now)?.let { risk ->
-                        // Sensor mounting geometry is not calibrated: no left/right,
-                        // camera object name or guaranteed collision-path claim.
-                        val message = if (risk.level == IndependentTofRiskEngine.Level.DANGER)
-                            "위험. 가까워지는 물체가 감지되었습니다."
-                        else "주의. 가까워지는 물체가 감지되었습니다."
-                        speech.speakWarning(message)
-                    }
-                } else tofWarningGate.reset()
+                tofRisks = if (foreground && !paused && frame != null)
+                    tofRiskEngine.evaluate(approaches, now) else emptyList()
+                dispatchWarning(now)
             }, onTracks = ::updateFusion)
         speech = KoreanSpeechGuide(this) { status, available ->
             ready = available
@@ -190,14 +213,17 @@ class MainActivity : Activity() {
     private fun resetObstacleState() {
         resetFusion()
         approachTracker.reset()
-        tofWarningGate.reset()
+        tofRisks = emptyList()
+        lastWarningAt = -1L
+        lastWarningDanger = false
+        lastWarningObservation = -1L
     }
 
     private fun updateExternalStatus(code: Int) {
         usbState = code
-        if (code == R.string.external_vision_error) resetFusion()
+        if (code == R.string.external_vision_error || code == R.string.external_camera_error) resetFusion()
         if (code != R.string.usb_receiving && code != R.string.external_vision_ready &&
-            code != R.string.external_vision_error) {
+            code != R.string.external_vision_error && code != R.string.external_camera_error) {
             resetObstacleState()
         }
         cameraStatus = when (code) {
