@@ -17,17 +17,21 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
     private var ready = false
     private var closed = false
     private val warningTone = runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 70) }.getOrNull()
+    private val stereo = StereoWarningAudio()
+    @Volatile private var hrtf: HrtfRenderer? = null
+    private val audioWorker = java.util.concurrent.Executors.newSingleThreadExecutor()
     private var warningId: String? = null
     private var warningDanger = false
     private var sequence = 0L
     private var pendingManual: Pair<Long, String>? = null
 
     fun canSpeakWarning(danger: Boolean): Boolean =
-        !closed && (warningTone != null || ready) && (warningId == null || (danger && !warningDanger))
+        !closed && (warningId == null || (danger && !warningDanger))
 
     private fun finishWarning(id: String?) {
         handler.post {
             if (!closed && id != null && id == warningId) {
+                stereo.stop()
                 warningId = null
                 warningDanger = false
                 val pending = pendingManual
@@ -39,6 +43,8 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
     }
 
     init {
+        val appContext = context.applicationContext
+        audioWorker.execute { hrtf = HrirAssetLoader.load(appContext) }
         engine = TextToSpeech(context.applicationContext) { result ->
             // Post so the engine field is assigned even if initialization completes immediately.
             handler.post {
@@ -87,23 +93,40 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
         val id = "obstacle-warning-${++sequence}"
         warningId = id
         warningDanger = danger
-        // Continuous tone: a short dot or a long dash (1:3 duration ratio).
-        val durationMs = if (danger) 450 else 150
-        // Direction is carried to the audio boundary; spatial rendering is not yet enabled.
-        android.util.Log.d("ThirdEyeAudio", "danger=$danger, azimuth=${direction?.azimuthDegrees}, elevation=${direction?.elevationDegrees}")
+        val durationMs = StereoWarningAudio.durationMs(danger)
         engine?.stop()
-        val played = runCatching {
-            warningTone?.stopTone()
-            warningTone?.startTone(ToneGenerator.TONE_DTMF_9, durationMs) == true
-        }.getOrDefault(false)
-        if (played) {
-            handler.postDelayed({ finishWarning(id) }, durationMs.toLong())
-            return true
+        stereo.stop()
+        warningTone?.stopTone()
+        val renderer = hrtf
+        // Render away from the UI thread; discard superseded or stopped warnings.
+        audioWorker.execute {
+            val binaural = if (renderer != null && direction != null)
+                runCatching { renderer.render(danger, direction.azimuthDegrees, direction.elevationDegrees) }.getOrNull()
+            else null
+            val pcm = binaural ?: StereoWarningAudio.render(danger, direction?.azimuthDegrees)
+            handler.post {
+                if (!closed && warningId == id) {
+                    val spatial = binaural != null && stereo.playPcm(pcm)
+                    val panned = !spatial && stereo.play(danger, direction?.azimuthDegrees)
+                    if (spatial || panned) {
+                        val frames = if (spatial) pcm.size / 2 else StereoWarningAudio.SAMPLE_RATE * durationMs / 1000
+                        android.util.Log.d("ThirdEyeAudio", "mode=${if (spatial) "HRTF" else "PAN"}, direction=$direction")
+                        handler.postDelayed({ finishWarning(id) },
+                            (frames * 1000L + StereoWarningAudio.SAMPLE_RATE - 1) / StereoWarningAudio.SAMPLE_RATE + 100)
+                    } else {
+                        val played = runCatching {
+                            warningTone?.startTone(ToneGenerator.TONE_DTMF_9, durationMs) == true
+                        }.getOrDefault(false)
+                        if (played) handler.postDelayed({ finishWarning(id) }, durationMs.toLong())
+                        else if (engine?.speak(message, TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) {
+                            finishWarning(id)
+                            report(R.string.tts_error)
+                        }
+                    }
+                }
+            }
         }
-        // Safety fallback only if the tone cannot be played.
-        val accepted = engine?.speak(message, TextToSpeech.QUEUE_FLUSH, null, id) == TextToSpeech.SUCCESS
-        if (!accepted) { finishWarning(id); report(R.string.tts_error) }
-        return accepted
+        return true
     }
 
     /** Each new contact replaces any previous label; it never executes the button action. */
@@ -115,12 +138,14 @@ class KoreanSpeechGuide(context: Context, private val onStatus: (Int, Boolean) -
         }
     }
 
-    fun stop() { warningId = null; warningDanger = false; pendingManual = null; warningTone?.stopTone(); engine?.stop() }
+    fun stop() { warningId = null; warningDanger = false; pendingManual = null; stereo.stop(); warningTone?.stopTone(); engine?.stop() }
     fun close() {
         closed = true
         ready = false
         handler.removeCallbacksAndMessages(null)
         engine?.stop()
+        audioWorker.shutdownNow()
+        stereo.close()
         warningTone?.release()
         engine?.shutdown()
         engine = null
