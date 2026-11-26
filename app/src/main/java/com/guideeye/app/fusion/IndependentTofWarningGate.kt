@@ -13,6 +13,9 @@ class IndependentTofWarningGate(
     private var lastLevel: IndependentTofRiskEngine.Level? = null
     fun reset() { lastAnnouncedAtMs = null; lastObservedAtMs = null; lastLevel = null }
 
+    fun remainingCooldownMs(nowMs: Long): Long =
+        lastAnnouncedAtMs?.let { (cooldownMs - (nowMs - it)).coerceIn(0L, cooldownMs) } ?: 0L
+
     fun offer(risks: List<IndependentTofRiskEngine.Risk>, nowMs: Long): IndependentTofRiskEngine.Risk? {
         val candidate = risks.filter {
             nowMs >= it.observedAtMs && nowMs - it.observedAtMs <= maxGapMs
