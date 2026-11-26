@@ -13,6 +13,8 @@
             <TextView android:id="@+id/camera_status" style="@style/DashboardText" android:text="@string/camera_status" />
             <Button android:id="@+id/use_phone_camera" style="@style/DashboardButton" android:text="@string/phone_preview_start" />
             <TextView style="@style/DashboardText" android:text="@string/phone_preview_help" />
+            <CheckBox android:id="@+id/tof_overlay_enabled" android:layout_width="match_parent" android:layout_height="wrap_content" android:checked="true" android:text="ToF 예상 투영 (미보정)" />
+            <CheckBox android:id="@+id/tof_overlay_swap" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="A/B 좌우 교환 (기본 A=왼쪽 가정)" />
             <com.guideeye.app.vision.DetectionPreview android:id="@+id/camera_preview"
                 android:layout_width="match_parent" android:layout_height="260dp"
                 android:background="#142532" android:importantForAccessibility="no" />
