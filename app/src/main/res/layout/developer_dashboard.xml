@@ -51,12 +51,13 @@
         <LinearLayout style="@style/DashboardCard">
             <TextView style="@style/DashboardHeading" android:text="@string/tof_grid_heading" />
 
-            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_a" android:visibility="gone" />
-            <Spinner android:id="@+id/tof_rotation_a" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" android:visibility="gone" />
-            <CheckBox android:id="@+id/tof_mirror_a" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_a" android:saveEnabled="false" android:visibility="gone" />
-            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" android:visibility="gone" />
-            <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" android:visibility="gone" />
-            <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" android:visibility="gone" />
+            <TextView style="@style/DashboardText" android:text="센서 방향 확인 (화면 표시 전용 · 융합 미보정)" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_a" />
+            <Spinner android:id="@+id/tof_rotation_a" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
+            <CheckBox android:id="@+id/tof_mirror_a" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_a" android:saveEnabled="false" />
+            <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" />
+            <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
+            <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" />
             <TextView android:id="@+id/tof_grid_waiting" style="@style/DashboardText"
                 android:text="@string/tof_grid_waiting" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
