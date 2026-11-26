@@ -15,9 +15,8 @@ class TofApproachTracker(
                         val closingMmPerSecond: Double, val observedAtMs: Long)
     private var previous: TofGridFrame? = null
     private var older: TofGridFrame? = null
-    private var previousCandidates = emptySet<Pair<Int,Int>>()
 
-    fun reset() { previous = null; older = null; previousCandidates = emptySet() }
+    fun reset() { previous = null; older = null }
 
     fun update(frame: TofGridFrame?): List<Approach> {
         if (frame == null) { reset(); return emptyList() }
@@ -28,7 +27,6 @@ class TofApproachTracker(
         if (prior == null) return emptyList()
         val deltaMs = frame.receivedAt - prior.receivedAt
         if (deltaMs !in 80..1000) {
-            previousCandidates = emptySet()
             older = null
             return emptyList()
         }
@@ -43,7 +41,7 @@ class TofApproachTracker(
                 if (old.status[zone] !in listOf(5,6,9) ||
                     new.status[zone] !in listOf(5,6,9) ||
                     before !in 1..4000 || after !in 1..maxDistanceMm) continue
-                val actualDeltaMs = deltaMs + new.ageAtReceiptMs - old.ageAtReceiptMs
+                val actualDeltaMs = deltaMs - new.ageAtReceiptMs + old.ageAtReceiptMs
                 if (actualDeltaMs !in 80..1000) continue
                 // A one-frame depth spike must not become a closing-speed alert.
                 // The prior two valid readings must show consistent approach.
@@ -52,6 +50,8 @@ class TofApproachTracker(
                     history.ageAtReceiptMs !in 0..1000 || earlier !in 1..4000 ||
                     earlier <= before) continue
                 val speed = (before-after)*1000.0/actualDeltaMs
+                val historyDeltaMs = prior.receivedAt - oldHistory!!.receivedAt - old.ageAtReceiptMs + history.ageAtReceiptMs
+                if (historyDeltaMs !in 80..1000) continue
                 if (speed >= minClosingMmPerSecond) {
                     candidates.add(Approach(sensor,zone,after,speed,frame.receivedAt))
                 }
@@ -59,22 +59,16 @@ class TofApproachTracker(
         }
         collect(0, prior.left, frame.left, oldHistory?.left)
         collect(1, prior.right, frame.right, oldHistory?.right)
-        // At least two adjacent cells must agree, and the region must persist
-        // across two consecutive speed estimates (three sensor frames).
-        val candidateKeys = candidates.map { it.sensor to it.zone }.toSet()
-        val confirmed = candidates.filter { point ->
+        // Three valid frames establish the decreasing trend; adjacent cells
+        // confirm spatial consistency without requiring a fourth frame.
+        return candidates.filter { point ->
             val row = point.zone / 8
             val col = point.zone % 8
             candidates.any { other ->
                 other !== point && other.sensor == point.sensor &&
                     kotlin.math.abs(other.zone/8-row) <= 1 &&
                     kotlin.math.abs(other.zone%8-col) <= 1
-            } && previousCandidates.any { (sensor, zone) ->
-                sensor == point.sensor && kotlin.math.abs(zone/8-row) <= 1 &&
-                    kotlin.math.abs(zone%8-col) <= 1
             }
         }
-        previousCandidates = candidateKeys
-        return confirmed
     }
 }
