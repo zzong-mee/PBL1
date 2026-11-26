@@ -14,9 +14,10 @@ class IndependentTofWarningGate(
     fun reset() { lastAnnouncedAtMs = null; lastObservedAtMs = null; lastLevel = null }
 
     fun offer(risks: List<IndependentTofRiskEngine.Risk>, nowMs: Long): IndependentTofRiskEngine.Risk? {
-        val candidate = risks.firstOrNull {
+        val candidate = risks.filter {
             nowMs >= it.observedAtMs && nowMs - it.observedAtMs <= maxGapMs
-        } ?: run { lastObservedAtMs = null; return null }
+        }.filter { lastObservedAtMs == null || it.observedAtMs > lastObservedAtMs!! }
+            .minWithOrNull(IndependentTofRiskEngine.warningPriority) ?: return null
         val previous = lastObservedAtMs
         if (previous != null && candidate.observedAtMs <= previous) return null
         lastObservedAtMs = candidate.observedAtMs
