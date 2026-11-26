@@ -56,8 +56,9 @@ class StereoWarningAudio : AutoCloseable {
                 .setBufferSizeInBytes(pcm.size * 2)
                 .build()
             track = next
-            check(next.state == AudioTrack.STATE_INITIALIZED)
+            check(next.state == AudioTrack.STATE_NO_STATIC_DATA || next.state == AudioTrack.STATE_INITIALIZED)
             check(next.write(pcm, 0, pcm.size) == pcm.size)
+            check(next.state == AudioTrack.STATE_INITIALIZED)
             next.play()
             true
         } catch (e: Exception) {
