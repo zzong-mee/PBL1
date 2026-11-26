@@ -188,6 +188,14 @@ class DeveloperActivity : Activity() {
         findViewById<View>(R.id.root).requestApplyInsets()
         usbMode = savedInstanceState?.getBoolean("usbMode", true) ?: true
         mockEnabled = savedInstanceState?.getBoolean("mockEnabled", true) ?: true
+        // Calibration is deliberately absent until measured on the physical glasses.
+        // No synthetic ToF distances are shown as object-specific measurements.
+        val rangeEstimator = com.guideeye.app.fusion.TrackedObjectRangeEstimator(null)
+        val visualTtc = com.guideeye.app.fusion.VisualExpansionTtcEstimator()
+        var visualEstimates = emptyList<com.guideeye.app.fusion.VisualExpansionTtcEstimator.Estimate>()
+        var usbRanges = emptyList<com.guideeye.app.fusion.TrackedObjectRangeEstimator.ObjectRange>()
+        var usbTracks = emptyList<com.guideeye.app.vision.TwoStageObjectTracker.TrackedDetection>()
+        var phoneTracks = emptyList<com.guideeye.app.vision.TwoStageObjectTracker.TrackedDetection>()
         vision = ExternalVisionController(this, { code ->
             if (usbMode && foreground) {
                 findViewById<TextView>(R.id.camera_status).setText(code)
@@ -200,11 +208,27 @@ class DeveloperActivity : Activity() {
             if (usbMode && foreground) {
                 lastDetectionAt = android.os.SystemClock.elapsedRealtime()
                 lastDetectionCount = detections.size
-                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections)
-                val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence*100).toInt()}%" }
+                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap,detections,usbTracks)
+                val objects = detections.joinToString { d ->
+                    val trackId = usbTracks.firstOrNull { it.detection == d }?.trackId
+                    val range = usbRanges.firstOrNull { it.trackId == trackId }
+                    val visual = visualEstimates.firstOrNull { it.trackId == trackId }
+                    val visualLabel = visual?.let { " 영상 TTC %.1f초(추정)".format(it.ttcSeconds) } ?: ""
+                    val detail = if (range == null) "거리 미보정$visualLabel" else {
+                        val ttc = range.ttcSeconds?.let { "%.1f초".format(it) } ?: "계산 불가"
+                        "거리 %.2fm, 접근 %.2fm/s, TTC %s".format(
+                            range.distanceMm / 1000.0, range.closingMmPerSecond / 1000.0, ttc)
+                    }
+                    "${YoloXDetector.labels.getOrNull(d.classId) ?: "객체"} #${trackId ?: "?"} $detail"
+                }
                 findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed,
                     objects.ifEmpty { getString(R.string.no_objects_detected) })
             } else bitmap.recycle()
+        }, onTracks = { tracks, received ->
+            usbTracks = tracks
+            visualEstimates = visualTtc.update(tracks, received)
+            usbRanges = rangeEstimator.update(
+                tracks, gridFrame, received, android.os.SystemClock.elapsedRealtime())
         })
         phone = PhoneCameraController(this, { code ->
             if (!usbMode) {
@@ -218,15 +242,19 @@ class DeveloperActivity : Activity() {
             if (!usbMode && foreground) {
                 lastDetectionAt = android.os.SystemClock.elapsedRealtime()
                 lastDetectionCount = detections.size
-                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap, detections)
+                findViewById<DetectionPreview>(R.id.camera_preview).show(bitmap, detections, phoneTracks)
                 val objects = detections.joinToString { "${YoloXDetector.labels[it.classId]} ${(it.confidence * 100).toInt()}%" }
                 findViewById<TextView>(R.id.video).text = getString(R.string.external_detection_info, elapsed, objects)
             } else bitmap.recycle()
-        })
+        }, onTracks = { tracks, _ -> phoneTracks = tracks })
         findViewById<Button>(R.id.use_phone_camera).setOnClickListener {
             usb.disconnect()
             vision.stop()
             usbMode = false
+            rangeEstimator.reset()
+            visualTtc.reset()
+            visualEstimates = emptyList()
+            usbRanges = emptyList()
             updateMode()
             startPhoneCamera()
         }

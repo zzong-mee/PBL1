@@ -13,10 +13,9 @@ import com.guideeye.app.accessibility.ButtonTouchFeedback
 import com.guideeye.app.speech.KoreanSpeechGuide
 import com.guideeye.app.vision.ExternalVisionController
 import com.guideeye.app.vision.YoloXDetector
-import com.guideeye.app.fusion.ObstacleFusion
-import com.guideeye.app.fusion.ObstacleWarningGate
+import com.guideeye.app.fusion.IndependentTofRiskEngine
+import com.guideeye.app.fusion.IndependentTofWarningGate
 import com.guideeye.app.fusion.TofApproachTracker
-import com.guideeye.app.usb.TofGridFrame
 import android.os.SystemClock
 
 /** User entry screen: no scrolling, Mock values, or USB debugging controls. */
@@ -31,8 +30,8 @@ class MainActivity : Activity() {
     private var usbState = R.string.usb_idle
     private var cameraStatus = R.string.external_disconnected
     private val approachTracker = TofApproachTracker()
-    private var latestApproaches = emptyList<TofApproachTracker.Approach>()
-    private val warningGate = ObstacleWarningGate()
+    private val tofRiskEngine = IndependentTofRiskEngine()
+    private val tofWarningGate = IndependentTofWarningGate()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,24 +53,21 @@ class MainActivity : Activity() {
         }
         findViewById<View>(R.id.root).requestApplyInsets()
         vision = ExternalVisionController(this, ::updateExternalStatus,
-            onGrid = { frame -> latestApproaches = approachTracker.update(frame) },
-            onDetections = { detections, received ->
-                if (foreground && !paused && ready) {
-                    val now = SystemClock.elapsedRealtime()
-                    val warning = ObstacleFusion.evaluate(detections, latestApproaches, now, received)
-                    warningGate.offer(warning, now)?.let { alert ->
-                        val name = YoloXDetector.labels.getOrNull(alert.classId) ?: "장애물"
-                        val direction = when (alert.sector) {
-                            0 -> "왼쪽 전방"
-                            2 -> "오른쪽 전방"
-                            else -> "정면"
-                        }
-                        val message = if (alert.level == ObstacleFusion.Level.DANGER)
-                            "주의. $direction 가까이에 $name 감지." else
-                            "$direction 에 $name 감지. 주의하세요."
+            onGrid = { frame ->
+                // ToF-only safety path: independent of camera inference or YOLO calibration.
+                val approaches = approachTracker.update(frame)
+                val now = SystemClock.elapsedRealtime()
+                if (foreground && !paused && ready && frame != null) {
+                    val risks = tofRiskEngine.evaluate(approaches, now)
+                    tofWarningGate.offer(risks, now)?.let { risk ->
+                        // Sensor mounting geometry is not calibrated: no left/right,
+                        // camera object name or guaranteed collision-path claim.
+                        val message = if (risk.level == IndependentTofRiskEngine.Level.DANGER)
+                            "위험. 가까워지는 물체가 감지되었습니다."
+                        else "주의. 가까워지는 물체가 감지되었습니다."
                         speech.speakWarning(message)
                     }
-                } else warningGate.reset()
+                } else tofWarningGate.reset()
             })
         speech = KoreanSpeechGuide(this) { status, available ->
             ready = available
@@ -103,9 +99,8 @@ class MainActivity : Activity() {
             paused = !paused
             // Stop speech already playing/queued; explicit button feedback remains available when paused.
             speech.stop()
-            warningGate.reset()
+            tofWarningGate.reset()
             approachTracker.reset()
-            latestApproaches = emptyList()
             if (paused) vision.stop() else { vision.start(); vision.connect() }
             updatePauseUi()
             speech.speak(getString(if (paused) R.string.operation_paused_message else R.string.operation_resumed_message))
@@ -149,8 +144,8 @@ class MainActivity : Activity() {
     private fun updateExternalStatus(code: Int) {
         usbState = code
         if (code != R.string.usb_receiving && code != R.string.external_vision_ready) {
-            latestTof = null
-            warningGate.reset()
+            approachTracker.reset()
+            tofWarningGate.reset()
         }
         cameraStatus = when (code) {
             R.string.usb_waiting, R.string.usb_receiving ->
@@ -181,6 +176,7 @@ class MainActivity : Activity() {
         super.onSaveInstanceState(outState)
     }
     override fun onStart() { super.onStart(); foreground = true; if (!paused) { vision.start(); vision.connect() }; announceIntro() }
-    override fun onStop() { foreground = false; latestTof = null; warningGate.reset(); vision.stop(); speech.stop(); super.onStop() }
+    override fun onStop() { foreground = false; approachTracker.reset()
+            tofWarningGate.reset(); vision.stop(); speech.stop(); super.onStop() }
     override fun onDestroy() { vision.close(); speech.close(); super.onDestroy() }
 }

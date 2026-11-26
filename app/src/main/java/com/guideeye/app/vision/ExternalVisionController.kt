@@ -16,13 +16,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ExternalVisionController(context: Context, private val status: (Int) -> Unit,
     private val result: (Bitmap,List<Detection>,Long) -> Unit = { bitmap,_,_ -> bitmap.recycle() },
     private val onGrid: (TofGridFrame?) -> Unit = {},
-    private val onDetections: (List<Detection>,Long) -> Unit = { _,_ -> }) {
+    private val onDetections: (List<Detection>,Long) -> Unit = { _,_ -> },
+    private val onTracks: (List<TwoStageObjectTracker.TrackedDetection>,Long) -> Unit = { _,_ -> }) {
     private val app = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
     private val busy = AtomicBoolean(false)
     @Volatile private var generation = 0
     private var detector: YoloXDetector? = null
+    private val tracker = TwoStageObjectTracker()
+    private var trackerGeneration = -1
     private var latest: Pair<Long,List<Detection>>? = null
     private var closed = false
     private val usb = UsbDistanceController(context, { code ->
@@ -69,11 +72,14 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
                 val start=SystemClock.elapsedRealtime()
                 val engine=detector ?: YoloXDetector(app).also { detector=it }
                 val detections=engine.detect(bitmap)
+                if (trackerGeneration != token) { tracker.reset(); trackerGeneration = token }
+                val tracked = tracker.update(detections)
                 val elapsed=SystemClock.elapsedRealtime()-start
                 main.post {
                     if(!closed && token==generation) {
                         latest=received to detections
                         onDetections(detections, received)
+                        onTracks(tracked, received)
                         status(R.string.external_vision_ready)
                         result(frame,detections,elapsed)
                     } else frame.recycle()

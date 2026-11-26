@@ -9,10 +9,11 @@ import android.view.View
 class DetectionPreview(context: Context, attrs: AttributeSet? = null) : View(context,attrs) {
     private var frame: Bitmap?=null
     private var detections=emptyList<Detection>()
+    private var tracked=emptyList<TwoStageObjectTracker.TrackedDetection>()
     private val paint=Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth=3f;textSize=android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,16f,resources.displayMetrics) }
     private val target=RectF()
-    fun show(bitmap: Bitmap, items: List<Detection>) { frame?.recycle();frame=bitmap;detections=items;invalidate() }
-    fun clear() { frame?.recycle();frame=null;detections=emptyList();invalidate() }
+    fun show(bitmap: Bitmap, items: List<Detection>, tracks: List<TwoStageObjectTracker.TrackedDetection> = emptyList()) { frame?.recycle();frame=bitmap;detections=items;tracked=tracks;invalidate() }
+    fun clear() { frame?.recycle();frame=null;detections=emptyList();tracked=emptyList();invalidate() }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas);val bitmap=frame ?: return
         val scale=minOf(width.toFloat()/bitmap.width,height.toFloat()/bitmap.height)
@@ -31,7 +32,9 @@ class DetectionPreview(context: Context, attrs: AttributeSet? = null) : View(con
             paint.color=Color.GREEN;paint.style=Paint.Style.STROKE
             canvas.drawRect(left+d.left*w,top+d.top*h,left+d.right*w,top+d.bottom*h,paint)
             paint.style=Paint.Style.FILL
-            canvas.drawText(YoloXDetector.labels[d.classId],left+d.left*w, maxOf(top+paint.textSize,top+d.top*h),paint)
+            val id = tracked.firstOrNull { it.detection == d }?.trackId
+            val label = YoloXDetector.labels.getOrNull(d.classId) ?: "객체"
+            canvas.drawText(if (id == null) label else "$label #$id",left+d.left*w, maxOf(top+paint.textSize,top+d.top*h),paint)
         }
     }
     override fun onDetachedFromWindow() { clear();super.onDetachedFromWindow() }
