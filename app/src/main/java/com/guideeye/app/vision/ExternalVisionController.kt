@@ -84,6 +84,19 @@ class ExternalVisionController(context: Context, private val status: (Int) -> Un
                     bitmap = cropped
                     decoded = bitmap
                 }
+                if (!respectExif) {
+                    // Center crop USB frames to an exact 2:1 aspect ratio.
+                    val cropHeight = minOf(bitmap.height, bitmap.width / 2)
+                    require(cropHeight > 0)
+                    val cropWidth = cropHeight * 2
+                    val cropped = Bitmap.createBitmap(bitmap,
+                        (bitmap.width - cropWidth) / 2,
+                        (bitmap.height - cropHeight) / 2,
+                        cropWidth, cropHeight)
+                    if (cropped !== bitmap) bitmap.recycle()
+                    bitmap = cropped
+                    decoded = bitmap
+                }
                 val frame = bitmap
                 val start=SystemClock.elapsedRealtime()
                 val engine=detector ?: YoloXDetector(app).also { detector=it }
