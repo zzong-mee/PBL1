@@ -72,6 +72,7 @@ class DeveloperActivity : Activity() {
     }
     private var debugWarning: IndependentTofRiskEngine.Risk? = null
     private lateinit var hrtf: HrtfTestController
+    private lateinit var measuredTest: com.guideeye.app.speech.MeasuredHrtfTest
     private lateinit var distanceTone: DistanceToneController
     private var fullTestEnabled = false
     private var lastJpegAt = 0L
@@ -84,6 +85,10 @@ class DeveloperActivity : Activity() {
         super.onCreate(savedInstanceState)
         volumeControlStream = android.media.AudioManager.STREAM_MUSIC
         setContentView(R.layout.activity_developer)
+        measuredTest = com.guideeye.app.speech.MeasuredHrtfTest(this)
+        findViewById<Button>(R.id.hrtf_stop).setOnLongClickListener {
+            measuredTest.stop(); true
+        }
         setupFullTest()
         setupCalibration()
         val savedOrientation = com.guideeye.app.fusion.TofOrientationSettings.load(this)
@@ -129,13 +134,13 @@ class DeveloperActivity : Activity() {
         }
         hrtfDirections.forEach { (id, direction) ->
             findViewById<Button>(id).setOnClickListener {
-                if (foreground) { radar.stop(); spatial.stop(); distanceTone.stop(); hrtf.play(direction.first) }
+                if (foreground) { radar.stop(); spatial.stop(); distanceTone.stop(); measuredTest.show(direction.first, { hrtf.stop(); speech.stop() }) }
             }
         }
         findViewById<Button>(R.id.hrtf_circle).setOnClickListener {
-            if (foreground) { radar.stop(); spatial.stop(); distanceTone.stop(); hrtf.play(0,true) }
+            if (foreground) { radar.stop(); spatial.stop(); distanceTone.stop(); measuredTest.show(0, { hrtf.stop(); speech.stop() }, true) }
         }
-        findViewById<Button>(R.id.hrtf_stop).setOnClickListener { hrtf.stop() }
+        findViewById<Button>(R.id.hrtf_stop).setOnClickListener { hrtf.stop(); measuredTest.stop() }
         findViewById<SeekBar>(R.id.hrtf_distance).setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
                 virtualDistance = progress + 200
@@ -774,6 +779,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { saveOrientation(); cancelCalibration("화면 종료 · 측정 취소"); foreground = false; resetFusion(); resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
-    override fun onDestroy() { radar.close(); spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
+    override fun onStop() { saveOrientation(); cancelCalibration("화면 종료 · 측정 취소"); foreground = false; measuredTest.stop(); resetFusion(); resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onDestroy() { measuredTest.close(); radar.close(); spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }
