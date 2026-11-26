@@ -37,6 +37,12 @@ import com.guideeye.app.vision.YoloXDetector
 import com.guideeye.app.usb.UsbDistanceController
 
 class DeveloperActivity : Activity() {
+    private var calibrationSession: org.json.JSONObject? = null
+    private var calibrationFrames = org.json.JSONArray()
+    private var calibrationResult: String? = null
+    private var calibrationLastAt = -1L
+    private var calibrationDeadline = 0L
+    private var calibrationExportSnapshot: String? = null
     private val distances: DistanceSource = MockDistanceSource()
     private lateinit var speech: KoreanSpeechGuide
     private var mockEnabled = true
@@ -69,6 +75,7 @@ class DeveloperActivity : Activity() {
         volumeControlStream = android.media.AudioManager.STREAM_MUSIC
         setContentView(R.layout.activity_developer)
         setupFullTest()
+        setupCalibration()
         distanceTone = DistanceToneController(this, { code ->
             findViewById<TextView>(R.id.distance_tone_status).setText(code)
             findViewById<Button>(R.id.toggle_distance_tone).setText(
@@ -304,6 +311,7 @@ class DeveloperActivity : Activity() {
                 if (failed) R.string.tof_device_error else R.string.usb_sensor_status)
         }, { frame ->
             if (foreground && usbMode) {
+                captureCalibration(frame)
                 gridFrame=frame
                 val now = android.os.SystemClock.elapsedRealtime()
                 debugRisks = debugRiskEngine.evaluate(debugApproach.update(frame), now)
@@ -356,6 +364,105 @@ class DeveloperActivity : Activity() {
         }
     }
 
+    private fun calibrationStatus(message: String) {
+        findViewById<TextView>(R.id.calibration_status).text = message
+    }
+
+    private fun cancelCalibration(message: String) {
+        if (calibrationSession != null) {
+            calibrationSession = null
+            calibrationStatus(message)
+        }
+    }
+
+    private fun setupCalibration() {
+        findViewById<Button>(R.id.calibration_capture).setOnClickListener {
+            if (calibrationSession != null) {
+                cancelCalibration("측정 취소")
+                return@setOnClickListener
+            }
+            val distance = findViewById<android.widget.EditText>(R.id.calibration_distance).text.toString().toIntOrNull()
+            val label = findViewById<android.widget.EditText>(R.id.calibration_label).text.toString().trim()
+            if (!foreground || !usbMode || distance == null || distance !in 300..4000 || label.isEmpty()) {
+                calibrationStatus("USB 모드, 실제 거리 300~4000mm 및 표적 위치 입력 필요")
+                return@setOnClickListener
+            }
+            val a = mount(true)
+            val b = mount(false)
+            calibrationFrames = org.json.JSONArray()
+            calibrationLastAt = -1L
+            calibrationDeadline = android.os.SystemClock.elapsedRealtime() + 60000L
+            calibrationSession = org.json.JSONObject().apply {
+                put("schema_version", 1)
+                put("reference_distance_mm", distance)
+                put("target_label", label)
+                put("grid_order", "st_uld_raw")
+                put("optically_validated", false)
+                put("sensor_separation_mm", 20)
+                put("sensor_height_mm", 20)
+                put("sensor_z_mm", -0.5)
+                put("sensor_axis_separation_deg", 55)
+                put("a_rotation_quarters", a.quarterTurns)
+                put("b_rotation_quarters", b.quarterTurns)
+                put("a_mirror_columns", a.mirrorColumns)
+                put("b_mirror_columns", b.mirrorColumns)
+                put("frames", calibrationFrames)
+            }
+            calibrationStatus("수집 중 0/20")
+        }
+        findViewById<Button>(R.id.calibration_export).setOnClickListener {
+            val result = calibrationResult
+            if (result == null) {
+                calibrationStatus("완료된 측정 없음")
+                return@setOnClickListener
+            }
+            calibrationExportSnapshot = result
+            startActivityForResult(android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                type = "application/json"
+                putExtra(android.content.Intent.EXTRA_TITLE, "third_eye_calibration_${System.currentTimeMillis()}.json")
+            }, 602)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != 602) return
+        val snapshot = calibrationExportSnapshot
+        calibrationExportSnapshot = null
+        if (resultCode != RESULT_OK || snapshot == null) return
+        val uri = data?.data ?: return
+        try {
+            val stream = contentResolver.openOutputStream(uri) ?: error("No output stream")
+            stream.use { it.write(snapshot.toByteArray(Charsets.UTF_8)) }
+            calibrationStatus("JSON 저장 완료")
+        } catch (e: Exception) {
+            calibrationStatus("JSON 저장 실패: ${e.message}")
+        }
+    }
+
+    private fun captureCalibration(frame: TofGridFrame?) {
+        val session = calibrationSession ?: return
+        if (frame == null || frame.receivedAt <= calibrationLastAt) return
+        fun raw(grid: TofGrid) = org.json.JSONObject().apply {
+            put("age_ms", grid.ageAtReceiptMs)
+            put("mm", org.json.JSONArray(grid.mm.map { it ?: org.json.JSONObject.NULL }))
+            put("status", org.json.JSONArray(grid.status.map { it ?: org.json.JSONObject.NULL }))
+        }
+        calibrationLastAt = frame.receivedAt
+        calibrationFrames.put(org.json.JSONObject().apply {
+            put("received_elapsed_ms", frame.receivedAt)
+            put("a", raw(frame.left))
+            put("b", raw(frame.right))
+        })
+        calibrationStatus("수집 중 ${calibrationFrames.length()}/20")
+        if (calibrationFrames.length() >= 20) {
+            calibrationResult = session.toString(2)
+            calibrationSession = null
+            calibrationStatus("20프레임 수집 완료 · JSON 저장 버튼 사용")
+        }
+    }
+
     private fun setupFullTest() {
         val button = findViewById<Button>(R.id.full_test_toggle)
         val panel = findViewById<LinearLayout>(R.id.full_test_blocks)
@@ -403,6 +510,7 @@ class DeveloperActivity : Activity() {
     private val gridFreshness=object:Runnable {
         override fun run() {
             if(!foreground)return
+            if (calibrationSession != null && android.os.SystemClock.elapsedRealtime() >= calibrationDeadline) cancelCalibration("측정 시간 초과")
             if(gridFrame?.let { android.os.SystemClock.elapsedRealtime()-it.receivedAt>1000 }==true) {
                 gridFrame=null; resetDebugRisk(); refreshGrid()
             } else if(gridFrame!=null) refreshGrid()
@@ -569,6 +677,7 @@ class DeveloperActivity : Activity() {
         } ?: getString(R.string.distance_tone_no_target)
     }
     private fun clearUsbDistances() {
+        cancelCalibration("USB 데이터 중단 · 측정 취소")
         gridFrame=null; resetDebugRisk(); renderDebugRisk(emptyList(), android.os.SystemClock.elapsedRealtime()); radar.invalidate(); spatial.invalidate(); spatialSelector.reset()
         updateGridHeatmap(R.id.tof_grid_a, null)
         updateGridHeatmap(R.id.tof_grid_b, null)
@@ -579,6 +688,7 @@ class DeveloperActivity : Activity() {
         findViewById<TextView>(R.id.right_distance).setText(R.string.usb_right_waiting)
     }
     private fun updateMode() {
+        cancelCalibration("모드 변경 · 측정 취소")
         resetDebugRisk()
         gridFrame = null
         refreshGrid()
@@ -611,6 +721,6 @@ class DeveloperActivity : Activity() {
         outState.putBoolean("mockEnabled", mockEnabled)
         super.onSaveInstanceState(outState)
     }
-    override fun onStop() { foreground = false; resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
+    override fun onStop() { cancelCalibration("화면 종료 · 측정 취소"); foreground = false; resetDebugRisk(); gridFrame = null; window.decorView.removeCallbacks(gridFreshness); radar.stop(); spatial.stop(); hrtf.stop(); distanceTone.stop(); phone.stop(); distances.stop(); usb.stop(); vision.stop(); findViewById<DetectionPreview>(R.id.camera_preview).clear(); findViewById<TextView>(R.id.camera_status).setText(R.string.external_disconnected); findViewById<TextView>(R.id.video).setText(R.string.video_placeholder); speech.stop(); super.onStop() }
     override fun onDestroy() { radar.close(); spatial.close(); hrtf.close(); distanceTone.stop(); phone.close(); usb.close(); vision.close(); speech.close(); super.onDestroy() }
 }
