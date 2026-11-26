@@ -379,7 +379,8 @@ class DeveloperActivity : Activity() {
             val label = YoloXDetector.labels.getOrNull(risk.classId) ?: "미분류"
             "${i+1}. #${risk.trackId} $label · ${risk.mobility} · ${risk.level} (점수 ${risk.score})\n" +
                 "거리 $distance · 접근 $speed · ToF TTC $mt · 영상 TTC $vt\n" +
-                "크기 변화 $growth · 경로 중첩 %.0f%% → %.0f%% · %s".format(
+                "크기 변화 $growth · 경로 중첩 " +
+                "%.0f%% → %.0f%% · %s".format(
                     risk.pathOverlap*100,risk.predictedPathOverlap*100,risk.reason)
         }
         findViewById<TextView>(R.id.video).text = "실험적 센서 융합 · 미보정 · 음성 경고 없음\n" +
