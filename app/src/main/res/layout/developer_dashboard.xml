@@ -58,6 +58,12 @@
             <TextView style="@style/DashboardText" android:text="@string/tof_rotation_b" />
             <Spinner android:id="@+id/tof_rotation_b" android:layout_width="match_parent" android:layout_height="64dp" android:saveEnabled="false" />
             <CheckBox android:id="@+id/tof_mirror_b" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/tof_mirror_b" android:saveEnabled="false" />
+            <TextView style="@style/DashboardText" android:text="캘리브레이션 원본 수집 (20프레임, 안경과 표적 고정)" />
+            <EditText android:id="@+id/calibration_distance" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number" android:hint="실제 거리 mm (300~4000)" />
+            <EditText android:id="@+id/calibration_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="text" android:hint="표적 위치 / 기준 센서 (예: A 중앙)" />
+            <Button android:id="@+id/calibration_capture" style="@style/DashboardButton" android:text="측정 시작 / 취소" />
+            <Button android:id="@+id/calibration_export" style="@style/DashboardButton" android:text="최근 측정 JSON 저장" />
+            <TextView android:id="@+id/calibration_status" style="@style/DashboardText" android:text="측정 대기 · 융합 미보정" />
             <TextView android:id="@+id/tof_grid_waiting" style="@style/DashboardText"
                 android:text="@string/tof_grid_waiting" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
